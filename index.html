@@ -303,6 +303,18 @@
                             class="w-full text-xs text-gray-500 file:mr-2 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border rounded-lg p-1">
                     </div>
 
+                    <!-- Subir Excel (Simplificado) - MOVED HERE -->
+                    <div class="mb-4">
+                        <div
+                            class="border-2 border-dashed border-blue-200 p-2 rounded-lg text-center hover:bg-blue-50 transition cursor-pointer relative flex items-center justify-center gap-2 group">
+                            <input type="file" id="excelFile" accept=".xlsx, .xls" multiple
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            <span class="text-xl">📂</span>
+                            <span class="text-blue-600 font-bold text-xs group-hover:text-blue-800">Importar
+                                Excel</span>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 gap-4">
                         <!-- Student Navigator (Roster) -->
                         <div id="studentNavigator" class="bg-blue-50 p-3 rounded border border-blue-200">
@@ -362,17 +374,7 @@
                                 </label>
                             </div>
 
-                            <!-- Subir Excel (Simplificado) -->
-                            <div class="mt-2">
-                                <div
-                                    class="border-2 border-dashed border-blue-200 p-2 rounded-lg text-center hover:bg-blue-50 transition cursor-pointer relative flex items-center justify-center gap-2 group">
-                                    <input type="file" id="excelFile" accept=".xlsx, .xls" multiple
-                                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                                    <span class="text-xl">📂</span>
-                                    <span class="text-blue-600 font-bold text-xs group-hover:text-blue-800">Importar
-                                        Excel</span>
-                                </div>
-                            </div>
+
 
                             <div class="border-t pt-2 mb-2">
                                 <p class="text-[10px] font-bold text-gray-500 mb-1">TAMAÑO DE LETRA</p>
@@ -681,6 +683,34 @@
                     class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-sm">Cancelar</button>
                 <button onclick="saveCompetencies()"
                     class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación Genérico -->
+    <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-[60]">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm transform transition-all scale-100">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                    <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900" id="confirmModalTitle">Eliminar Estudiante</h3>
+                <div class="mt-2">
+                    <p class="text-sm text-gray-500" id="confirmModalMessage">¿Estás seguro?</p>
+                </div>
+            </div>
+            <div class="mt-5 sm:mt-6 flex gap-3">
+                <button type="button" id="btnConfirmCancel"
+                    class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:text-sm">
+                    Cancelar
+                </button>
+                <button type="button" id="btnConfirmOk"
+                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:text-sm">
+                    Sí, Eliminar
+                </button>
             </div>
         </div>
     </div>

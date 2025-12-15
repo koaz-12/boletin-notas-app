@@ -21,6 +21,33 @@ export const StudentManager = {
         Toast.success(`Estudiante "${name}" creado.`);
     },
 
+    // Helper: Show Confirmation Modal
+    showConfirm: (title, message, onConfirm) => {
+        const modal = document.getElementById('confirmModal');
+        const titleEl = document.getElementById('confirmModalTitle');
+        const msgEl = document.getElementById('confirmModalMessage');
+        const btnOk = document.getElementById('btnConfirmOk');
+        const btnCancel = document.getElementById('btnConfirmCancel');
+
+        if (!modal) return; // Safety
+
+        titleEl.innerText = title;
+        msgEl.innerText = message;
+
+        // Reset previous listeners (clone node trick or direct property assignment)
+        // Simple property assignment is safer for single-event replacement
+        btnOk.onclick = () => {
+            onConfirm();
+            modal.classList.add('hidden');
+        };
+
+        btnCancel.onclick = () => {
+            modal.classList.add('hidden');
+        };
+
+        modal.classList.remove('hidden');
+    },
+
     // Delete Current Student
     deleteCurrentStudent: () => {
         const state = store.getState();
@@ -28,22 +55,29 @@ export const StudentManager = {
 
         if (!current) return;
 
-        if (confirm(`¿Estás seguro de ELIMINAR al estudiante "${current}"?\nSe perderán todas sus notas y observaciones.`)) {
-            store.deleteStudent(current);
-            Toast.warning(`Estudiante "${current}" eliminado.`);
-        }
+        StudentManager.showConfirm(
+            "Eliminar Estudiante",
+            `¿Estás seguro de ELIMINAR al estudiante "${current}"?\nSe perderán todas sus notas y observaciones.`,
+            () => {
+                store.deleteStudent(current);
+                Toast.warning(`Estudiante "${current}" eliminado.`);
+            }
+        );
     },
 
     // Delete All Students (Hard Reset)
     deleteAllStudents: () => {
-        if (!confirm("⚠️ ADVERTENCIA CRÍTICA ⚠️\n\nEstás a punto de ELIMINAR TODOS LOS ESTUDIANTES y sus calificaciones.\nEsta acción NO se puede deshacer.\n\n¿Estás realmente seguro?")) return;
-
-        // Reset Store
-        store.setRoster([], {});
-        // Create Default
-        store.loadStudent("Estudiante 1", false);
-
-        Toast.info("Todos los estudiantes han sido eliminados. Se ha reiniciado el sistema.");
+        StudentManager.showConfirm(
+            "⚠️ ELIMINAR TODOS ⚠️",
+            "Estás a punto de ELIMINAR TODOS los estudiantes.\nEsta acción es irreversible.\n¿Estás seguro?",
+            () => {
+                // Reset Store
+                store.setRoster([], {});
+                // Create Default
+                store.loadStudent("Estudiante 1", false);
+                Toast.info("Todos los estudiantes han sido eliminados.");
+            }
+        );
     },
 
     // Navigate (Next/Prev)
