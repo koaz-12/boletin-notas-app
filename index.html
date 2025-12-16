@@ -124,7 +124,7 @@
                             </div>
 
                             <!-- SITUACIÓN DEL ESTUDIANTE (Compact Vertical) -->
-                            <div class="border p-2 rounded bg-white">
+                            <div id="containerSituacionFinal" class="border p-2 rounded bg-white">
                                 <label
                                     class="block text-[10px] font-bold text-gray-400 mb-1 text-center uppercase tracking-wider">Situación
                                     Final</label>
@@ -710,6 +710,25 @@
                 <button type="button" id="btnConfirmOk"
                     class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:text-sm">
                     Sí, Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Input (Prompt) -->
+    <div id="promptModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-[60]">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm transform transition-all scale-100">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-2" id="promptModalTitle">Título</h3>
+            <p class="text-sm text-gray-500 mb-4" id="promptModalMessage">Mensaje...</p>
+            <input type="text" id="promptInput" class="w-full border p-2 rounded mb-4" placeholder="Escribe aquí...">
+            <div class="flex gap-3 justify-end">
+                <button type="button" id="btnPromptCancel"
+                    class="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:text-sm">
+                    Cancelar
+                </button>
+                <button type="button" id="btnPromptOk"
+                    class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:text-sm">
+                    Aceptar
                 </button>
             </div>
         </div>

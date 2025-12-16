@@ -17,13 +17,76 @@ export const PDFManager = {
         }
     },
 
+    // New: Auto-load Template (Embedded Base64)
+    loadTemplate: async function (grade) {
+        console.log(`Cargando plantilla embebida para Grado ${grade}...`);
+
+        try {
+            // Import Templates Dynamically
+            // Assumes src/js/config/Templates.js exists and exports GradeTemplates
+            const { GradeTemplates } = await import('../config/Templates.js');
+            const dataURI = GradeTemplates[grade];
+
+            if (!dataURI) {
+                // Not found silently, or warn? 
+                console.warn(`No template found for grade ${grade} in registry.`);
+                return;
+            }
+
+            // Convert Base64 DataURI to Uint8Array for PDF.js
+            const pdfData = this.base64ToUint8Array(dataURI);
+
+            // Process directly
+            // reuse logic but avoid double overlay toggle if already active?
+            const loadingTask = pdfjsLib.getDocument(pdfData);
+            this.pdfDoc = await loadingTask.promise;
+            this.renderPages();
+
+            // SUCCESS UI
+            store.updateSettings({ isOverlayMode: true });
+            AppUI.toggleOverlayClass(true);
+            const btn = document.getElementById('btnFloatOverlay');
+            if (btn) {
+                btn.classList.add('bg-blue-600', 'text-white', 'ring-4', 'ring-blue-300');
+                btn.classList.remove('bg-white', 'text-blue-600', 'border-blue-700');
+            }
+            Toast.success(`Plantilla de ${grade}º Grado cargada (Embebida).`);
+
+        } catch (e) {
+            console.warn("Fallo carga plantilla embebida:", e);
+            if (e.message.includes('Módulo')) {
+                Toast.error("Error: Archivo Templates.js no generado. Ejecuta script Python.");
+            } else {
+                Toast.warning(`No se encontró plantilla embebida para ${grade}º Grado.`);
+            }
+        }
+    },
+
+    // Helper: DataURI to Uint8Array
+    base64ToUint8Array: function (dataURI) {
+        const base64Marker = ';base64,';
+        const base64Index = dataURI.indexOf(base64Marker) + base64Marker.length;
+        const base64 = dataURI.substring(base64Index);
+        const raw = window.atob(base64);
+        const rawLength = raw.length;
+        const array = new Uint8Array(new ArrayBuffer(rawLength));
+
+        for (let i = 0; i < rawLength; i++) {
+            array[i] = raw.charCodeAt(i);
+        }
+        return array;
+    },
+
     handleUpload: async function (input) {
         const file = input.files[0];
         if (!file || file.type !== 'application/pdf') {
-            alert('Por favor, sube un archivo PDF válido.');
+            Toast.warning('Por favor, sube un archivo PDF válido.');
             return;
         }
+        await this.processManualFile(file);
+    },
 
+    processManualFile: async function (file) {
         const fileReader = new FileReader();
         fileReader.onload = async (e) => {
             const typedarray = new Uint8Array(e.target.result);
@@ -32,22 +95,18 @@ export const PDFManager = {
                 this.pdfDoc = await loadingTask.promise;
                 this.renderPages();
 
-                // Activate Overlay Mode
+                // UI Updates
                 store.updateSettings({ isOverlayMode: true });
                 AppUI.toggleOverlayClass(true);
-
-                // Update new FAB state
                 const btn = document.getElementById('btnFloatOverlay');
                 if (btn) {
                     btn.classList.add('bg-blue-600', 'text-white', 'ring-4', 'ring-blue-300');
                     btn.classList.remove('bg-white', 'text-blue-600', 'border-blue-700');
                 }
-
-                Toast.success('PDF de fondo cargado correctamente.');
+                Toast.success("PDF personalizado cargado.");
             } catch (error) {
-                console.error('Error procesando PDF:', error);
-                alert('Error al procesar el PDF: ' + error.message);
-                Toast.error('Error detallado: ' + error.message);
+                console.error('Error procesando PDF Manual:', error);
+                Toast.error('Error al procesar el PDF.');
             }
         };
         fileReader.readAsArrayBuffer(file);
@@ -89,77 +148,77 @@ export const PDFManager = {
             return;
         }
 
-        if (!confirm(`Se generará un PDF con los boletines de ${students.length} estudiantes.\nEsto puede tardar unos segundos.\n\nAsegúrese de activar "Gráficos de fondo" en la ventana de impresión.`)) {
-            return;
-        }
+        AppUI.confirm(
+            "Imprimir Boletines",
+            `Se generará un PDF con los boletines de ${students.length} estudiantes.\nEsto puede tardar unos segundos.\n\nAsegúrese de activar "Gráficos de fondo" en la ventana de impresión.`,
+            () => {
+                // Save current student to restore later
+                const initialStudent = state.currentStudent;
 
-        // Save current student to restore later
-        const initialStudent = state.currentStudent;
+                // Prep UI
+                const reportContainer = document.querySelector('#report-container'); // The visible one
+                const batchContainer = document.createElement('div');
+                batchContainer.id = 'batch-print-container';
+                batchContainer.className = 'print-only'; // Ensure CSS only shows this
 
-        // Prep UI
-        const reportContainer = document.querySelector('#report-container'); // The visible one
-        const batchContainer = document.createElement('div');
-        batchContainer.id = 'batch-print-container';
-        batchContainer.className = 'print-only'; // Ensure CSS only shows this
+                // Hide main container
+                reportContainer.classList.add('hidden');
+                document.body.appendChild(batchContainer);
 
-        // Hide main container
-        reportContainer.classList.add('hidden');
-        document.body.appendChild(batchContainer);
+                try {
+                    // Loop students
+                    students.forEach(studentName => {
+                        store.loadStudent(studentName); // Updates DOM (sync?)
 
-        try {
-            // Loop students
-            students.forEach(studentName => {
-                store.loadStudent(studentName); // Updates DOM (sync?)
-                // Since loadStudent is sync (updates state + notifies => UI update), 
-                // the DOM (#page-1, #page-2) now reflects 'studentName'.
+                        // CLONE the pages
+                        const p1 = document.getElementById('page-1');
+                        const p2 = document.getElementById('page-2');
 
-                // CLONE the pages
-                const p1 = document.getElementById('page-1');
-                const p2 = document.getElementById('page-2');
+                        // Clone Deep
+                        const c1 = p1.cloneNode(true);
+                        const c2 = p2.cloneNode(true);
 
-                // Clone Deep
-                const c1 = p1.cloneNode(true);
-                const c2 = p2.cloneNode(true);
+                        // FIX: Manually copy Canvas content (cloneNode doesn't copy canvas bitmap)
+                        const copyCanvas = (srcParent, destParent) => {
+                            const srcCan = srcParent.querySelector('canvas');
+                            const destCan = destParent.querySelector('canvas');
+                            if (srcCan && destCan) {
+                                const ctx = destCan.getContext('2d');
+                                ctx.drawImage(srcCan, 0, 0);
+                            }
+                        };
+                        copyCanvas(p1, c1);
+                        copyCanvas(p2, c2);
 
-                // FIX: Manually copy Canvas content (cloneNode doesn't copy canvas bitmap)
-                const copyCanvas = (srcParent, destParent) => {
-                    const srcCan = srcParent.querySelector('canvas');
-                    const destCan = destParent.querySelector('canvas');
-                    if (srcCan && destCan) {
-                        const ctx = destCan.getContext('2d');
-                        ctx.drawImage(srcCan, 0, 0);
-                    }
-                };
-                copyCanvas(p1, c1);
-                copyCanvas(p2, c2);
+                        // Add Page Breaks
+                        c1.style.breakAfter = 'always'; // Force break after Page 1
+                        c1.style.pageBreakAfter = 'always';
 
-                // Add Page Breaks
-                c1.style.breakAfter = 'always'; // Force break after Page 1
-                c1.style.pageBreakAfter = 'always';
+                        c2.style.breakAfter = 'always'; // Force break after Page 2 (Student End)
+                        c2.style.pageBreakAfter = 'always';
 
-                c2.style.breakAfter = 'always'; // Force break after Page 2 (Student End)
-                c2.style.pageBreakAfter = 'always';
+                        // Force Show Clones (if hidden)
+                        c1.classList.remove('hidden');
+                        c2.classList.remove('hidden');
 
-                // Force Show Clones (if hidden)
-                c1.classList.remove('hidden');
-                c2.classList.remove('hidden');
+                        // Append
+                        batchContainer.appendChild(c1);
+                        batchContainer.appendChild(c2);
+                    });
 
-                // Append
-                batchContainer.appendChild(c1);
-                batchContainer.appendChild(c2);
-            });
+                    // Trigger Print
+                    window.print();
 
-            // Trigger Print
-            window.print();
-
-        } catch (e) {
-            console.error(e);
-            alert("Error generando PDF masivo: " + e.message);
-        } finally {
-            // Restore
-            batchContainer.remove();
-            reportContainer.classList.remove('hidden');
-            if (initialStudent) store.loadStudent(initialStudent);
-        }
+                } catch (e) {
+                    console.error(e);
+                    Toast.error("Error generando PDF masivo: " + e.message);
+                } finally {
+                    // Restore
+                    batchContainer.remove();
+                    reportContainer.classList.remove('hidden');
+                    if (initialStudent) store.loadStudent(initialStudent);
+                }
+            }
+        );
     }
 };

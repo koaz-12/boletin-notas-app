@@ -34,6 +34,11 @@ export const Events = {
         // Apply Default/Saved Layout on Boot
         interactManager.loadPositions();
 
+        // Auto-load Template on Boot
+        if (initialState.grade) {
+            PDFManager.loadTemplate(initialState.grade);
+        }
+
 
         // 1. Store Updates -> UI Render
         store.subscribe((state) => {
@@ -217,6 +222,8 @@ export const Events = {
                 }
 
                 store.setGrade(target.value);
+                // Auto-load template for the new grade
+                PDFManager.loadTemplate(target.value);
                 interactManager.loadPositions();
             }
             if (target.id === 'pdfBgFile') {

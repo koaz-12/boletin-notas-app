@@ -13,7 +13,10 @@ export class AppState {
             settings: {
                 isOverlayMode: true,
                 isEditMode: false,
-                fontSize: 11
+                fontSize: 14, // User Request: 14px
+                alignP1: 'left', // User Request: Left Alignment
+                alignP2G: 'center', // Grades
+                alignP2O: 'left' // Observations
             },
             observations: { p1: "", p2: "", p3: "", p4: "" },
             attendance: {

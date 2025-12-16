@@ -4,48 +4,26 @@
  */
 import { store } from './State.js';
 import { Toast } from './Toast.js';
+import { AppUI } from './AppUI.js';
 
 export const StudentManager = {
     // Add New Student
     addNewStudent: () => {
-        const name = prompt("Nombre del nuevo estudiante:");
-        if (!name) return;
+        AppUI.prompt(
+            "Nuevo Estudiante",
+            "Nombre del estudiante:",
+            (name) => {
+                const state = store.getState();
+                if (state.studentList.includes(name)) {
+                    Toast.error("Ya existe un estudiante con ese nombre.");
+                    return;
+                }
 
-        const state = store.getState();
-        if (state.studentList.includes(name)) {
-            Toast.error("Ya existe un estudiante con ese nombre.");
-            return;
-        }
-
-        store.loadStudent(name); // State will auto-create
-        Toast.success(`Estudiante "${name}" creado.`);
-    },
-
-    // Helper: Show Confirmation Modal
-    showConfirm: (title, message, onConfirm) => {
-        const modal = document.getElementById('confirmModal');
-        const titleEl = document.getElementById('confirmModalTitle');
-        const msgEl = document.getElementById('confirmModalMessage');
-        const btnOk = document.getElementById('btnConfirmOk');
-        const btnCancel = document.getElementById('btnConfirmCancel');
-
-        if (!modal) return; // Safety
-
-        titleEl.innerText = title;
-        msgEl.innerText = message;
-
-        // Reset previous listeners (clone node trick or direct property assignment)
-        // Simple property assignment is safer for single-event replacement
-        btnOk.onclick = () => {
-            onConfirm();
-            modal.classList.add('hidden');
-        };
-
-        btnCancel.onclick = () => {
-            modal.classList.add('hidden');
-        };
-
-        modal.classList.remove('hidden');
+                store.loadStudent(name); // State will auto-create
+                Toast.success(`Estudiante "${name}" creado.`);
+            },
+            "Ej: Juan Pérez"
+        );
     },
 
     // Delete Current Student
@@ -55,19 +33,20 @@ export const StudentManager = {
 
         if (!current) return;
 
-        StudentManager.showConfirm(
+        AppUI.confirm(
             "Eliminar Estudiante",
             `¿Estás seguro de ELIMINAR al estudiante "${current}"?\nSe perderán todas sus notas y observaciones.`,
             () => {
                 store.deleteStudent(current);
                 Toast.warning(`Estudiante "${current}" eliminado.`);
-            }
+            },
+            true // Is Danger
         );
     },
 
     // Delete All Students (Hard Reset)
     deleteAllStudents: () => {
-        StudentManager.showConfirm(
+        AppUI.confirm(
             "⚠️ ELIMINAR TODOS ⚠️",
             "Estás a punto de ELIMINAR TODOS los estudiantes.\nEsta acción es irreversible.\n¿Estás seguro?",
             () => {
@@ -76,7 +55,8 @@ export const StudentManager = {
                 // Create Default
                 store.loadStudent("Estudiante 1", false);
                 Toast.info("Todos los estudiantes han sido eliminados.");
-            }
+            },
+            true
         );
     },
 

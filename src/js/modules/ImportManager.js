@@ -5,6 +5,7 @@
 import { store } from './State.js';
 import { Toast } from './Toast.js';
 import { ExcelImport } from './ExcelImport.js';
+import { AppUI } from './AppUI.js';
 
 let currentBatchData = [];
 let currentIdMap = new Map();
@@ -46,7 +47,7 @@ export const ImportManager = {
 
             }).catch(err => {
                 console.error(err);
-                alert('Error al leer el archivo Excel.');
+                Toast.error('Error al leer el archivo Excel.');
             });
         } else {
             // Multi File Mode
@@ -106,44 +107,48 @@ export const ImportManager = {
             }
 
             if (students.length === 0) {
-                alert("No se encontraron estudiantes en la Columna B (empezando fila 8).");
+                Toast.warning("No se encontraron estudiantes en la Columna B (empezando fila 8).");
                 return;
             }
 
             // Confirm Import
-            if (confirm(`Se encontraron ${students.length} estudiantes.\n¿Deseas añadirlos a la lista?`)) {
-                const state = store.getState();
-                const newRoster = { ...state.roster };
-                const newList = [...state.studentList];
-                const defaultSubjects = state.subjects;
+            AppUI.confirm(
+                "Importar Lista",
+                `Se encontraron ${students.length} estudiantes.\n¿Deseas añadirlos a la lista?`,
+                () => {
+                    const state = store.getState();
+                    const newRoster = { ...state.roster };
+                    const newList = [...state.studentList];
+                    const defaultSubjects = state.subjects;
 
-                let added = 0;
-                students.forEach(name => {
-                    if (!newRoster[name]) {
-                        // Create Empty Profile
-                        newRoster[name] = {
-                            subjects: JSON.parse(JSON.stringify(defaultSubjects)),
-                            attendance: { p1: {}, p2: {}, p3: {}, p4: {} },
-                            observations: { p1: "", p2: "", p3: "", p4: "" },
-                            studentStatus: {},
-                            finalCondition: "",
-                            studentInfo: { nombres: "", apellidos: "", id: "", section: "", order: "" }
-                        };
-                        added++;
-                    }
-                    if (!state.studentList.includes(name)) {
-                        newList.push(name);
-                    }
-                });
+                    let added = 0;
+                    students.forEach(name => {
+                        if (!newRoster[name]) {
+                            // Create Empty Profile
+                            newRoster[name] = {
+                                subjects: JSON.parse(JSON.stringify(defaultSubjects)),
+                                attendance: { p1: {}, p2: {}, p3: {}, p4: {} },
+                                observations: { p1: "", p2: "", p3: "", p4: "" },
+                                studentStatus: {},
+                                finalCondition: "",
+                                studentInfo: { nombres: "", apellidos: "", id: "", section: "", order: "" }
+                            };
+                            added++;
+                        }
+                        if (!state.studentList.includes(name)) {
+                            newList.push(name);
+                        }
+                    });
 
-                if (added > 0) {
-                    store.setRoster(newList, newRoster);
-                    alert(`¡Éxito! Se añadieron ${added} estudiantes nuevos.`);
-                    store.loadStudent(newList[newList.length - 1]);
-                } else {
-                    alert("Todos los estudiantes del archivo ya estaban en la lista.");
+                    if (added > 0) {
+                        store.setRoster(newList, newRoster);
+                        Toast.success(`¡Éxito! Se añadieron ${added} estudiantes nuevos.`);
+                        store.loadStudent(newList[newList.length - 1]);
+                    } else {
+                        Toast.info("Todos los estudiantes del archivo ya estaban en la lista.");
+                    }
                 }
-            }
+            );
 
         } catch (err) {
             console.error(err);
@@ -282,168 +287,172 @@ export const ImportManager = {
 
         // --- MASS IMPORT LOGIC ---
         if (studentName === 'ALL') {
-            if (!confirm("Esto importará TODOS los estudiantes encontrados en las hojas seleccionadas.\n¿Continuar?")) return;
+            AppUI.confirm(
+                "Importar Catálogo Completo",
+                "Esto importará TODOS los estudiantes encontrados en las hojas seleccionadas.\n¿Continuar?",
+                () => {
+                    const state = store.getState();
+                    const newRoster = { ...state.roster };
+                    let newStudentList = [...state.studentList];
+                    const defaultSubjects = JSON.parse(JSON.stringify(state.subjects));
+                    // Reset template values
+                    defaultSubjects.forEach(s => {
+                        s.final = ""; s.recovery = "";
+                        s.competencies.forEach(c => { c.p1 = ""; c.rp1 = ""; c.p2 = ""; c.rp2 = ""; c.p3 = ""; c.rp3 = ""; c.p4 = ""; c.rp4 = ""; });
+                    });
 
-            const state = store.getState();
-            const newRoster = { ...state.roster };
-            let newStudentList = [...state.studentList];
-            const defaultSubjects = JSON.parse(JSON.stringify(state.subjects));
-            // Reset template values
-            defaultSubjects.forEach(s => {
-                s.final = ""; s.recovery = "";
-                s.competencies.forEach(c => { c.p1 = ""; c.rp1 = ""; c.p2 = ""; c.rp2 = ""; c.p3 = ""; c.rp3 = ""; c.p4 = ""; c.rp4 = ""; });
-            });
+                    let updatedStudents = new Set();
+                    let totalGrades = 0;
 
-            let updatedStudents = new Set();
-            let totalGrades = 0;
+                    // Determine Grade Layout ONCE
+                    const currentGrade = parseInt(store.getState().grade);
+                    const isSimpleLayout = (currentGrade <= 2);
+                    ExcelImport.setMode(!isSimpleLayout); // Set correct config
 
-            // Determine Grade Layout ONCE
-            const currentGrade = parseInt(store.getState().grade);
-            const isSimpleLayout = (currentGrade <= 2);
-            ExcelImport.setMode(!isSimpleLayout); // Set correct config
+                    selects.forEach((select, index) => {
+                        const subjectIndex = parseInt(select.value);
+                        if (isNaN(subjectIndex) || subjectIndex < 0) return; // Ignore
 
-            selects.forEach((select, index) => {
-                const subjectIndex = parseInt(select.value);
-                if (isNaN(subjectIndex) || subjectIndex < 0) return; // Ignore
+                        const item = currentBatchData[index];
+                        if (!item || !item.rows) return;
 
-                const item = currentBatchData[index];
-                if (!item || !item.rows) return;
+                        // Iterate ALL Rows
+                        const nameIndex = ExcelImport.getConfig().nameIndex;
 
-                // Iterate ALL Rows
-                const nameIndex = ExcelImport.getConfig().nameIndex;
+                        for (let i = ExcelImport.getConfig().startRow; i < item.rows.length; i++) {
+                            const row = item.rows[i];
+                            let name = row[nameIndex];
+                            if (name && typeof name === 'string' && name.trim().length > 0) {
+                                name = name.trim();
+                                if (name.toLowerCase().includes("docente") || name.toLowerCase().includes("estudiante")) continue;
 
-                for (let i = ExcelImport.getConfig().startRow; i < item.rows.length; i++) {
-                    const row = item.rows[i];
-                    let name = row[nameIndex];
-                    if (name && typeof name === 'string' && name.trim().length > 0) {
-                        name = name.trim();
-                        if (name.toLowerCase().includes("docente") || name.toLowerCase().includes("estudiante")) continue;
+                                // Init Student if new
+                                const isNewStudent = !newRoster[name];
+                                if (isNewStudent) {
+                                    newRoster[name] = {
+                                        subjects: JSON.parse(JSON.stringify(defaultSubjects)),
+                                        attendance: { p1: {}, p2: {}, p3: {}, p4: {} },
+                                        observations: { p1: "", p2: "", p3: "", p4: "" },
+                                        studentStatus: {},
+                                        finalCondition: "",
+                                        studentInfo: { nombres: "", apellidos: "", id: "", section: "", order: "" }, // Explicit Init
+                                        grade: currentGrade
+                                    };
+                                    if (!newStudentList.includes(name)) newStudentList.push(name);
+                                }
 
-                        // Init Student if new
-                        const isNewStudent = !newRoster[name];
-                        if (isNewStudent) {
-                            newRoster[name] = {
-                                subjects: JSON.parse(JSON.stringify(defaultSubjects)),
-                                attendance: { p1: {}, p2: {}, p3: {}, p4: {} },
-                                observations: { p1: "", p2: "", p3: "", p4: "" },
-                                studentStatus: {},
-                                finalCondition: "",
-                                studentInfo: { nombres: "", apellidos: "", id: "", section: "", order: "" }, // Explicit Init
-                                grade: currentGrade
-                            };
-                            if (!newStudentList.includes(name)) newStudentList.push(name);
-                        }
+                                // Extract & Populate Names (First Time Only or if empty)
+                                if (!newRoster[name].studentInfo) newRoster[name].studentInfo = { nombres: "", apellidos: "", id: "", section: "", order: "" };
+                                const sInfo = newRoster[name].studentInfo;
+                                if (!sInfo.nombres) {
+                                    const parsed = ImportManager.parseStudentName(name);
+                                    sInfo.nombres = parsed.nombres;
+                                    sInfo.apellidos = parsed.apellidos;
+                                }
 
-                        // Extract & Populate Names (First Time Only or if empty)
-                        if (!newRoster[name].studentInfo) newRoster[name].studentInfo = { nombres: "", apellidos: "", id: "", section: "", order: "" };
-                        const sInfo = newRoster[name].studentInfo;
-                        if (!sInfo.nombres) {
-                            const parsed = ImportManager.parseStudentName(name);
-                            sInfo.nombres = parsed.nombres;
-                            sInfo.apellidos = parsed.apellidos;
-                        }
+                                // If it's a new student, add them to the store and get default roster data
+                                // NOTE: Removed redundant store.addStudent call that caused crash. 
+                                // Initialization is already handled above in newRoster[name] = ...
 
-                        // If it's a new student, add them to the store and get default roster data
-                        // NOTE: Removed redundant store.addStudent call that caused crash. 
-                        // Initialization is already handled above in newRoster[name] = ...
+                                const grades = ExcelImport.extractGrades(row);
+                                // Extract Order
+                                if (!sInfo.order && grades.order) {
+                                    sInfo.order = grades.order;
+                                }
 
-                        const grades = ExcelImport.extractGrades(row);
-                        // Extract Order
-                        if (!sInfo.order && grades.order) {
-                            sInfo.order = grades.order;
-                        }
+                                // Populate ID from Map (Fuzzy Match)
+                                if (currentIdMap.size > 0 && grades.name) {
+                                    const matchedId = ExcelImport.findBestMatch(grades.name, currentIdMap);
+                                    if (matchedId) {
+                                        sInfo.id = matchedId;
+                                    }
+                                }
 
-                        // Populate ID from Map (Fuzzy Match)
-                        if (currentIdMap.size > 0 && grades.name) {
-                            const matchedId = ExcelImport.findBestMatch(grades.name, currentIdMap);
-                            if (matchedId) {
-                                sInfo.id = matchedId;
+                                const targetSub = newRoster[name].subjects[subjectIndex];
+                                // const currentGrade = parseInt(store.getState().grade); // Already defined above
+                                // const isSimpleLayout = (currentGrade <= 2); // Already defined above
+
+                                if (isSimpleLayout) {
+                                    // Grade 1-2: Compact Layout (P1, P2, P3, P4)
+                                    // Indices: 0->P1, 1->P2, 2->P3, 3->P4
+                                    const mapSimple = (compIndex, values) => {
+                                        if (!values) return;
+                                        targetSub.competencies[compIndex].p1 = values[0];
+                                        targetSub.competencies[compIndex].p2 = values[1];
+                                        targetSub.competencies[compIndex].p3 = values[2];
+                                        targetSub.competencies[compIndex].p4 = values[3];
+                                    };
+                                    mapSimple(0, grades.c1);
+                                    mapSimple(1, grades.c2);
+                                    mapSimple(2, grades.c3);
+                                    // C4-C7 removed for Primary Education (Only 3 Competencies)
+                                } else {
+                                    // Grade 3+: Expected Interleaved (P1, RP1, P2, RP2...)
+                                    // Note: If ExcelImport config is 4-col, logic below for P3/P4 (indices 4-7) will fail/be empty.
+                                    // We keep it as legacy, but it might need ExcelImport update later.
+
+                                    // Map Grades P1/P2
+                                    // Map Grades P1/P2
+                                    targetSub.competencies[0].p1 = grades.c1[0]; targetSub.competencies[0].rp1 = grades.c1[1];
+                                    targetSub.competencies[0].p2 = grades.c1[2]; targetSub.competencies[0].rp2 = grades.c1[3];
+                                    targetSub.competencies[0].p3 = grades.c1[4]; targetSub.competencies[0].rp3 = grades.c1[5];
+                                    targetSub.competencies[0].p4 = grades.c1[6]; targetSub.competencies[0].rp4 = grades.c1[7];
+
+                                    targetSub.competencies[1].p1 = grades.c2[0]; targetSub.competencies[1].rp1 = grades.c2[1];
+                                    targetSub.competencies[1].p2 = grades.c2[2]; targetSub.competencies[1].rp2 = grades.c2[3];
+                                    targetSub.competencies[1].p3 = grades.c2[4]; targetSub.competencies[1].rp3 = grades.c2[5];
+                                    targetSub.competencies[1].p4 = grades.c2[6]; targetSub.competencies[1].rp4 = grades.c2[7];
+
+                                    targetSub.competencies[2].p1 = grades.c3[0]; targetSub.competencies[2].rp1 = grades.c3[1];
+                                    targetSub.competencies[2].p2 = grades.c3[2]; targetSub.competencies[2].rp2 = grades.c3[3];
+                                    targetSub.competencies[2].p3 = grades.c3[4]; targetSub.competencies[2].rp3 = grades.c3[5];
+                                    targetSub.competencies[2].p4 = grades.c3[6]; targetSub.competencies[2].rp4 = grades.c3[7];
+
+                                    // Removed C4-C7 mapping as Primary Education only has 3 Competencies per Subject.
+                                    // The Advanced Layout is for Recovery Columns, not extra competencies.
+                                }
+
+                                // Recovery (Fix: usage of correct property 'recovery' from ExcelImport)
+                                if (grades.recovery && Array.isArray(grades.recovery)) {
+                                    // Filter out empty values and join them
+                                    const validRec = grades.recovery.filter(r => r !== "" && r !== null && r !== undefined);
+                                    if (validRec.length > 0) {
+                                        targetSub.recovery = validRec.join(" / ");
+                                    }
+                                }
+
+                                // Map Finals (CF) & Competency Averages (C1-C3)
+                                if (grades.final !== undefined) targetSub.final = grades.final;
+                                if (grades.finalRecovery !== undefined) targetSub.final_recovery = grades.finalRecovery;
+                                if (grades.esp !== undefined) targetSub.special_recovery = grades.esp;
+                                if (grades.compFinals && Array.isArray(grades.compFinals)) {
+                                    // Map C1, C2, C3 finals
+                                    if (grades.compFinals[0]) targetSub.competencies[0].final = grades.compFinals[0];
+                                    if (grades.compFinals[1]) targetSub.competencies[1].final = grades.compFinals[1];
+                                    if (grades.compFinals[2]) targetSub.competencies[2].final = grades.compFinals[2];
+                                    // Add more if needed depending on grade level (C4...)? 
+                                    // ExcelImport helper returns array length based on config.
+                                }
+
+                                updatedStudents.add(name);
+                                totalGrades++;
                             }
                         }
+                    });
 
-                        const targetSub = newRoster[name].subjects[subjectIndex];
-                        // const currentGrade = parseInt(store.getState().grade); // Already defined above
-                        // const isSimpleLayout = (currentGrade <= 2); // Already defined above
-
-                        if (isSimpleLayout) {
-                            // Grade 1-2: Compact Layout (P1, P2, P3, P4)
-                            // Indices: 0->P1, 1->P2, 2->P3, 3->P4
-                            const mapSimple = (compIndex, values) => {
-                                if (!values) return;
-                                targetSub.competencies[compIndex].p1 = values[0];
-                                targetSub.competencies[compIndex].p2 = values[1];
-                                targetSub.competencies[compIndex].p3 = values[2];
-                                targetSub.competencies[compIndex].p4 = values[3];
-                            };
-                            mapSimple(0, grades.c1);
-                            mapSimple(1, grades.c2);
-                            mapSimple(2, grades.c3);
-                            // C4-C7 removed for Primary Education (Only 3 Competencies)
-                        } else {
-                            // Grade 3+: Expected Interleaved (P1, RP1, P2, RP2...)
-                            // Note: If ExcelImport config is 4-col, logic below for P3/P4 (indices 4-7) will fail/be empty.
-                            // We keep it as legacy, but it might need ExcelImport update later.
-
-                            // Map Grades P1/P2
-                            // Map Grades P1/P2
-                            targetSub.competencies[0].p1 = grades.c1[0]; targetSub.competencies[0].rp1 = grades.c1[1];
-                            targetSub.competencies[0].p2 = grades.c1[2]; targetSub.competencies[0].rp2 = grades.c1[3];
-                            targetSub.competencies[0].p3 = grades.c1[4]; targetSub.competencies[0].rp3 = grades.c1[5];
-                            targetSub.competencies[0].p4 = grades.c1[6]; targetSub.competencies[0].rp4 = grades.c1[7];
-
-                            targetSub.competencies[1].p1 = grades.c2[0]; targetSub.competencies[1].rp1 = grades.c2[1];
-                            targetSub.competencies[1].p2 = grades.c2[2]; targetSub.competencies[1].rp2 = grades.c2[3];
-                            targetSub.competencies[1].p3 = grades.c2[4]; targetSub.competencies[1].rp3 = grades.c2[5];
-                            targetSub.competencies[1].p4 = grades.c2[6]; targetSub.competencies[1].rp4 = grades.c2[7];
-
-                            targetSub.competencies[2].p1 = grades.c3[0]; targetSub.competencies[2].rp1 = grades.c3[1];
-                            targetSub.competencies[2].p2 = grades.c3[2]; targetSub.competencies[2].rp2 = grades.c3[3];
-                            targetSub.competencies[2].p3 = grades.c3[4]; targetSub.competencies[2].rp3 = grades.c3[5];
-                            targetSub.competencies[2].p4 = grades.c3[6]; targetSub.competencies[2].rp4 = grades.c3[7];
-
-                            // Removed C4-C7 mapping as Primary Education only has 3 Competencies per Subject.
-                            // The Advanced Layout is for Recovery Columns, not extra competencies.
-                        }
-
-                        // Recovery (Fix: usage of correct property 'recovery' from ExcelImport)
-                        if (grades.recovery && Array.isArray(grades.recovery)) {
-                            // Filter out empty values and join them
-                            const validRec = grades.recovery.filter(r => r !== "" && r !== null && r !== undefined);
-                            if (validRec.length > 0) {
-                                targetSub.recovery = validRec.join(" / ");
-                            }
-                        }
-
-                        // Map Finals (CF) & Competency Averages (C1, C2, C3...)
-                        if (grades.final !== undefined) targetSub.final = grades.final;
-                        if (grades.finalRecovery !== undefined) targetSub.final_recovery = grades.finalRecovery;
-                        if (grades.esp !== undefined) targetSub.special_recovery = grades.esp;
-                        if (grades.compFinals && Array.isArray(grades.compFinals)) {
-                            // Map C1, C2, C3 finals
-                            if (grades.compFinals[0]) targetSub.competencies[0].final = grades.compFinals[0];
-                            if (grades.compFinals[1]) targetSub.competencies[1].final = grades.compFinals[1];
-                            if (grades.compFinals[2]) targetSub.competencies[2].final = grades.compFinals[2];
-                            // Add more if needed depending on grade level (C4...)? 
-                            // ExcelImport helper returns array length based on config.
-                        }
-
-                        updatedStudents.add(name);
-                        totalGrades++;
+                    // Remove Default 'Estudiante 1' if we imported real students
+                    if (updatedStudents.size > 0 && newStudentList.includes("Estudiante 1")) {
+                        newStudentList = newStudentList.filter(n => n !== "Estudiante 1");
+                        delete newRoster["Estudiante 1"];
                     }
+
+                    store.setRoster(newStudentList, newRoster);
+                    Toast.success(`Importación masiva completada. ${updatedStudents.size} estudiantes actualizados.`);
+                    document.getElementById('importModal').classList.add('hidden');
+                    store.loadStudent(newStudentList[0]);
                 }
-            });
-
-            // Remove Default 'Estudiante 1' if we imported real students
-            if (updatedStudents.size > 0 && newStudentList.includes("Estudiante 1")) {
-                newStudentList = newStudentList.filter(n => n !== "Estudiante 1");
-                delete newRoster["Estudiante 1"];
-            }
-
-            store.setRoster(newStudentList, newRoster);
-            Toast.success(`Importación masiva completada. ${updatedStudents.size} estudiantes actualizados.`);
-            document.getElementById('importModal').classList.add('hidden');
-            store.loadStudent(newStudentList[0]);
-
+            );
+            return; // Wait for async confirmation
         } else {
             // --- SINGLE STUDENT LOGIC --- (Existing logic)
             selects.forEach((select, index) => {

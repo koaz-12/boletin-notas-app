@@ -101,22 +101,38 @@ export const ReportRenderer = {
         const container = document.getElementById('page-1');
         if (!container) return;
 
+        const grade = parseInt(store.getState().grade) || 1;
+        const isSimpleGrade = grade <= 2; // Grade 1 & 2 don't use Final Situation
+
         const startTop = 450;
         const ensure = (id, val, t, l, w, h, b, ty, al) => ensureElement(container, id, val, t, l, w, h, b, ty, al);
+        const remove = (id) => {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        };
 
         const status = store.getState().studentStatus || {};
 
-        // Promovido
-        ensure('status_prom', status.promoted || '', startTop + 30, 140, 30, 20);
+        if (isSimpleGrade) {
+            // REMOVE fields if they exist (cleanup when switching from Gr 3 -> 1)
+            remove('status_prom');
+            remove('status_postponed');
+            remove('status_repeater');
+            remove('final_condition');
+        } else {
+            // RENDER fields for Gr 3+
+            // Promovido
+            ensure('status_prom', status.promoted || '', startTop + 30, 140, 30, 20);
 
-        // Aplazado
-        ensure('status_postponed', status.postponed || '', startTop + 30, 290, 30, 20);
+            // Aplazado
+            ensure('status_postponed', status.postponed || '', startTop + 30, 290, 30, 20);
 
-        // Repitente
-        ensure('status_repeater', status.repeater || '', startTop + 30, 440, 30, 20);
+            // Repitente
+            ensure('status_repeater', status.repeater || '', startTop + 30, 440, 30, 20);
 
-        // Condición Final
-        ensure('final_condition', store.getState().finalCondition || '', startTop + 100, 50, 500, 40, false, 'text', 'left');
+            // Condición Final
+            ensure('final_condition', store.getState().finalCondition || '', startTop + 100, 50, 500, 40, false, 'text', 'left');
+        }
     },
 
     toggleOverlayClass: function (enabled) {

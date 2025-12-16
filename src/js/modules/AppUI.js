@@ -113,6 +113,21 @@ export const AppUI = {
             if (g === 1 || g === 3) suffix = "er";
             if (g === 2) suffix = "do";
             headerDisp.textContent = `(${g}${suffix} Grado)`;
+
+            // Hide/Show Final Condition Input based on grade
+            const condInput = document.getElementById('inputCondicion');
+            const condContainer = document.getElementById('containerSituacionFinal');
+
+            const shouldHide = (g <= 2);
+
+            if (condInput) {
+                if (shouldHide) condInput.classList.add('hidden');
+                else condInput.classList.remove('hidden');
+            }
+            if (condContainer) {
+                if (shouldHide) condContainer.classList.add('hidden');
+                else condContainer.classList.remove('hidden');
+            }
         }
     },
 
@@ -151,12 +166,7 @@ export const AppUI = {
         GridRenderer.renderInteractiveGrid(subjects);
     },
 
-    updateHeader: function (state) {
-        const headerEl = document.getElementById('dispHeaderGrade');
-        if (headerEl) {
-            headerEl.textContent = `(${state.grade}º Grado)`;
-        }
-    },
+
 
     renderOverlays: function (subjects) {
         // Fix: If subjects are empty/reset, force clear overlays
@@ -166,5 +176,81 @@ export const AppUI = {
             return;
         }
         ReportRenderer.renderOverlays(subjects);
+    },
+
+    // --- MODAL HELPERS ---
+    confirm: function (title, message, onOk, isDanger = false) {
+        const modal = document.getElementById('confirmModal');
+        if (!modal) return alert(message); // Fallback
+
+        const titleEl = document.getElementById('confirmModalTitle');
+        const msgEl = document.getElementById('confirmModalMessage');
+        const btnOk = document.getElementById('btnConfirmOk');
+        const btnCancel = document.getElementById('btnConfirmCancel');
+        const iconContainer = modal.querySelector('.text-red-600')?.parentElement; // Red icon wrapper
+
+        titleEl.innerText = title;
+        msgEl.innerText = message;
+
+        // Visual Customization
+        if (isDanger) {
+            btnOk.className = "w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:text-sm";
+            if (iconContainer) iconContainer.classList.remove('hidden');
+        } else {
+            btnOk.className = "w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:text-sm";
+            // Hide red icon for standard confirms? Or swap it. For now, leave as is or hide.
+            if (iconContainer) iconContainer.classList.add('hidden');
+        }
+
+        btnOk.onclick = () => {
+            modal.classList.add('hidden');
+            if (onOk) onOk();
+        };
+        btnCancel.onclick = () => {
+            modal.classList.add('hidden');
+        };
+
+        modal.classList.remove('hidden');
+    },
+
+    prompt: function (title, message, onOk, placeholder = "") {
+        const modal = document.getElementById('promptModal');
+        if (!modal) {
+            const val = prompt(message, placeholder);
+            if (val && onOk) onOk(val);
+            return;
+        }
+
+        const titleEl = document.getElementById('promptModalTitle');
+        const msgEl = document.getElementById('promptModalMessage');
+        const input = document.getElementById('promptInput');
+        const btnOk = document.getElementById('btnPromptOk');
+        const btnCancel = document.getElementById('btnPromptCancel');
+
+        titleEl.innerText = title;
+        msgEl.innerText = message;
+        input.value = "";
+        input.placeholder = placeholder;
+
+        const submit = () => {
+            const val = input.value.trim();
+            if (val) {
+                modal.classList.add('hidden');
+                onOk(val);
+            } else {
+                input.focus();
+            }
+        };
+
+        btnOk.onclick = submit;
+        btnCancel.onclick = () => modal.classList.add('hidden');
+
+        // Enter key support
+        input.onkeyup = (e) => {
+            if (e.key === 'Enter') submit();
+        };
+
+        modal.classList.remove('hidden');
+        setTimeout(() => input.focus(), 100);
     }
 };
