@@ -41,7 +41,18 @@ export const ImportManager = {
 
                 // We need to fetch students from the first sheet to populate the roster selector
                 // Use the first sheet as master
-                ExcelImport.getStudents(file, sheets[0]).then(({ students }) => {
+                ExcelImport.getStudents(file, sheets[0]).then(({ students, meta }) => {
+                    // Process Metadata (New Template)
+                    if (meta) {
+                        const sd = store.state.schoolData;
+                        if (meta.centro) sd.centro = meta.centro;
+                        if (meta.docente) sd.docente = meta.docente;
+                        if (meta.seccion) sd.section = meta.seccion;
+                        if (meta.anio) sd.codigo = meta.anio; // Hack: Put Year in Code field or similar? Or just ignore.
+
+                        AppUI.initSchoolData();
+                        Toast.info("Datos del Centro actualizados desde Excel 🏫");
+                    }
                     ImportManager.renderImportModal(students, currentBatchData);
                 });
 
@@ -450,7 +461,9 @@ export const ImportManager = {
                     Toast.success(`Importación masiva completada. ${updatedStudents.size} estudiantes actualizados.`);
                     document.getElementById('importModal').classList.add('hidden');
                     store.loadStudent(newStudentList[0]);
-                }
+                },
+                false,
+                "Sí, Importar"
             );
             return; // Wait for async confirmation
         } else {

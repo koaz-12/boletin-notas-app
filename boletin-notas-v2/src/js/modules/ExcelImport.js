@@ -67,24 +67,122 @@ export const ExcelImport = {
         return XLSX.utils.sheet_to_json(sheet, { header: 1 });
     },
 
-    // Gets students from a specific sheet (or first sheet)
-    getStudents: async function (file, sheetName = null) {
-        const workbook = await this.readWorkbook(file);
-        const targetSheet = sheetName || workbook.SheetNames[0];
-        const rows = this.getRows(workbook, targetSheet);
+    // --- TEMPLATE DETECTION ---
+    detectTemplateType: function (workbook) {
+        const datosSheet = workbook.Sheets["Datos"];
+        if (!datosSheet) return 'legacy';
 
+        // Convert Sheet to JSON (Array of Arrays) to scan structure
+        const rows = XLSX.utils.sheet_to_json(datosSheet, { header: 1 });
+
+        // Scan the first column (Column A, index 0) for vertical keywords
+        // User says: Label in one row, Value in the next.
+        // Keywords: "Docente", "Centro Educativo", "Año Escolar"
+        let verticalScore = 0;
+        for (let i = 0; i < Math.min(rows.length, 30); i++) {
+            const cell = rows[i] ? String(rows[i][0] || "").trim().toLowerCase() : "";
+            if (cell.includes("docente")) verticalScore++;
+            if (cell.includes("centro educativo")) verticalScore++;
+            if (cell.includes("grado")) verticalScore++;
+        }
+
+        if (verticalScore >= 2) return 'v2'; // High confidence it's the new vertical template
+        return 'legacy'; // Default to legacy if "Datos" exists but lacks vertical structure
+    },
+
+    getStudents: async function (file) {
+        const workbook = await this.readWorkbook(file);
+        const type = this.detectTemplateType(workbook);
+        console.log(`📊 ExcelImport: Detected Template Type: ${type}`);
+
+        if (type === 'v2') {
+            return this.parseNewTemplate(workbook);
+        } else {
+            return this.parseLegacyTemplate(workbook);
+        }
+    },
+
+    // --- PARSERS ---
+
+    parseLegacyTemplate: async function (workbook) {
+        // Original Logic (Index-based from Config)
+        // Usually reads first sheet or active sheet
+        const targetSheet = workbook.SheetNames[0];
+        const rows = this.getRows(workbook, targetSheet);
         const cfg = this.getConfig();
+
         const students = [];
         for (let i = cfg.startRow; i < rows.length; i++) {
             const row = rows[i];
-            if (row[cfg.nameIndex]) {
+            if (row && row[cfg.nameIndex]) {
                 students.push({
                     index: i,
                     name: row[cfg.nameIndex]
                 });
             }
         }
-        return { workbook, students, rows };
+        return { workbook, students, rows, type: 'legacy' };
+    },
+
+    parseNewTemplate: async function (workbook) {
+        const sheetName = "Datos";
+        const rows = this.getRows(workbook, sheetName);
+        const meta = {};
+
+        // 1. Extract Metadata (Vertical Scanning)
+        // Look for keywords in Col 0, take value from Col 0 in Next Row
+        for (let i = 0; i < Math.min(rows.length, 30); i++) {
+            const cell = rows[i] ? String(rows[i][0] || "").trim().toLowerCase() : "";
+
+            if (cell.includes("centro educativo")) meta.centro = rows[i + 1] ? rows[i + 1][0] : "";
+            if (cell.includes("docente")) meta.docente = rows[i + 1] ? rows[i + 1][0] : "";
+            if (cell.includes("grado")) meta.grado = rows[i + 1] ? rows[i + 1][0] : "";
+            if (cell.includes("sección") || cell.includes("seccion")) meta.seccion = rows[i + 1] ? rows[i + 1][0] : "";
+            if (cell.includes("año escolar")) meta.anio = rows[i + 1] ? rows[i + 1][0] : "";
+        }
+
+        console.log("📊 Metadata Detected:", meta);
+
+        // 2. Find Student Table Headers
+        // Look for row containing "Nombres" and "ID"
+        let headerRowIndex = -1;
+        let colName = -1, colID = -1, colNo = -1;
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row) continue;
+
+            // Scan columns in this row
+            for (let c = 0; c < row.length; c++) {
+                const val = String(row[c] || "").trim().toLowerCase();
+                if (val.includes("nombres") || val.includes("nombre y apellido")) colName = c;
+                if (val === "id" || val.includes("id estudiante")) colID = c;
+                if (val === "no." || val === "no" || val.includes("número")) colNo = c;
+            }
+
+            if (colName !== -1 && colID !== -1) {
+                headerRowIndex = i;
+                break;
+            }
+        }
+
+        const students = [];
+        if (headerRowIndex !== -1) {
+            // Start reading from next row
+            for (let i = headerRowIndex + 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (row && row[colName]) {
+                    students.push({
+                        index: i, // Index in the 'Datos' sheet
+                        name: row[colName],
+                        id: row[colID] || "",
+                        no: colNo !== -1 ? row[colNo] : ""
+                    });
+                }
+            }
+        }
+
+        return { workbook, students, rows, meta, type: 'v2' };
     },
 
     extractGrades: function (row) {

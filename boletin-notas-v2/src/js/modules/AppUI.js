@@ -1,29 +1,121 @@
-/**
- * AppUI.js
- * Main UI Coordinator
- * Delegates to:
- * - UI/GridRenderer.js (Interactive Data Entry)
- * - UI/ReportRenderer.js (Visual Report Overlays)
- */
 import { store, sectionManager } from './State.js';
 import { ExcelImport } from './ExcelImport.js';
 import { GridRenderer } from './UI/GridRenderer.js';
 import { ReportRenderer } from './UI/ReportRenderer.js';
+import { Toast } from './Toast.js';
+import CloudStorage from './CloudStorage.js';
+import { CoreUtils } from './CoreUtils.js';
 
 export const AppUI = {
     init: function () {
         // Bind UI Actions
         document.getElementById('save-student-btn')?.addEventListener('click', () => {
             store.saveCurrentStudent();
-            alert('Estudiante guardado en memoria.');
+            Toast.show('Estudiante guardado en base de datos local.', 'success');
         });
 
+        // --- CLOUD AUTO-SAVE LOGIC ---
+        const performCloudSave = async () => {
+            const spinner = document.getElementById('cloud-spinner');
+            const label = document.getElementById('cloud-status-text');
+
+            // Visual feedback: "Auto-saving..."
+            if (spinner) spinner.classList.remove('hidden');
+            if (label) {
+                label.textContent = "Auto-guardando...";
+                label.className = "text-xs font-medium text-blue-500 transition-colors";
+            }
+
+            try {
+                if (typeof store.exportFullBackup !== 'function') return;
+
+                const backup = store.exportFullBackup();
+                const result = await CloudStorage.saveData(backup);
+
+                if (spinner) spinner.classList.add('hidden');
+
+                if (result.success) {
+                    if (label) {
+                        label.textContent = "Guardado";
+                        label.className = "text-xs font-bold text-green-600 transition-colors";
+                    }
+                    console.log("☁️ Auto-save complete");
+
+                    // Reset to "Sincronizar"
+                    setTimeout(() => {
+                        if (label) {
+                            label.textContent = "Sincronizar";
+                            label.className = "text-xs font-medium text-gray-500 group-hover:text-green-700 transition-colors";
+                        }
+                    }, 4000);
+                }
+            } catch (error) {
+                if (spinner) spinner.classList.add('hidden');
+                console.error("Auto-save failed:", error);
+            }
+        };
+
+        const debouncedAutoSave = CoreUtils.debounce(performCloudSave, 5000);
+
+        // Cloud Save Button
+        const btnCloud = document.getElementById('btn-cloud-save');
+        if (btnCloud) {
+            btnCloud.addEventListener('click', async () => {
+                const spinner = document.getElementById('cloud-spinner');
+                const label = document.getElementById('cloud-status-text');
+
+                // UI Loading
+                spinner?.classList.remove('hidden');
+                label.textContent = "Guardando...";
+
+                // Logic
+                const backup = store.exportFullBackup();
+                const result = await CloudStorage.saveData(backup);
+
+                // UI Result
+                spinner?.classList.add('hidden');
+
+                if (result.success) {
+                    label.textContent = "¡Guardado!";
+                    label.className = "text-xs font-bold text-green-600 transition-colors";
+                    Toast.show("☁️ Copia de seguridad guardada en Back4App éxitosamente.", 'success');
+
+                    // Reset text after 3s
+                    setTimeout(() => {
+                        label.textContent = "Sincronizar";
+                        label.className = "text-xs font-medium text-gray-500 group-hover:text-green-700 transition-colors";
+                    }, 3000);
+                } else {
+                    label.textContent = "Error";
+                    label.className = "text-xs font-bold text-red-600";
+                    Toast.show("❌ Error al guardar: " + result.error, 'error');
+                }
+            });
+        }
+
         this.initFloatingControls();
+
+        // Cloud Restore Button
+        const btnRestore = document.getElementById('btn-cloud-restore');
+        if (btnRestore) {
+            btnRestore.addEventListener('click', async () => {
+                if (confirm("¿Estás seguro de restaurar? Esto sobrescribirá tus datos locales con la versión de la nube.")) {
+                    // Since AuthManager is imported script-side but not fully exposed to AppUI module scope in this file?
+                    // Verify imports. AuthManager is NOT imported in AppUI.js.
+                    // I need to import it or dispatch event.
+                    // Let's import it.
+                    const { AuthManager } = await import('./AuthManager.js');
+                    AuthManager.restoreFromCloud();
+                }
+            });
+        }
         this.renderSectionTabs(); // Initial Render of Tabs
 
         // Subscribe to Store Updates for LIVE Tab Updates
         store.subscribe(() => {
             this.renderSectionTabs();
+            // Trigger Auto-Save on ANY data change
+            if (typeof debouncedAutoSave === 'function') debouncedAutoSave();
         });
     },
 
@@ -32,64 +124,75 @@ export const AppUI = {
         if (!container) return;
 
         container.innerHTML = '';
-        container.className = 'flex items-center gap-2 overflow-x-auto pb-0'; // Restore original classes if needed, or just remove the new ones
+        // Container handled in HTML mainly, but ensure classes
+        container.className = "flex items-end gap-1 overflow-x-auto px-2";
 
         // 1. Render Tabs
         sectionManager.sections.forEach(sec => {
             const isActive = (sec.id === sectionManager.currentSectionId);
 
-            // Shift Styles (Matutina = Sun/Orange, Vespertina = Moon/Indigo)
+            // Shift Styles 
             const isMatutina = (sec.shift || '').toLowerCase().includes('mat');
             const shiftIcon = isMatutina ? '☀️' : '🌙';
-            const shiftColor = isMatutina ? 'text-orange-600' : 'text-indigo-600';
+            // Colors specific to Premium Folder theme
+            const shiftColor = isActive ? 'text-orange-500' : 'text-gray-400';
+            const moonColor = isActive ? 'text-indigo-500' : 'text-gray-400';
+            const iconColor = isMatutina ? shiftColor : moonColor;
 
-            const activeClass = isActive
-                ? 'bg-blue-600 text-white shadow-md ring-1 ring-blue-700 z-10 scale-105'
-                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-300';
+            // Folder Tab Logic
+            // Active: White, Connected to bottom (border-b-0), higher Z
+            // Inactive: Gray, smaller, lower Z
+
+            let tabClass = "flex flex-col justify-center px-4 py-2 rounded-t-lg cursor-pointer transition-all border border-b-0 relative group ";
+
+            if (isActive) {
+                // Active: Bigger, White, Blue Top Border (optional), Covers bottom line
+                tabClass += "bg-white border-gray-200 text-blue-800 shadow-[0_-2px_4px_rgba(0,0,0,0.05)] z-30 h-14 min-w-[140px] transform translate-y-[1px]";
+                // translate-y-[1px] pushes it down to cover the panel border exactly
+            } else {
+                // Inactive: Gray, Recessed
+                tabClass += "bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 z-10 h-12 min-w-[130px] mb-0 shadow-inner";
+            }
 
             const tab = document.createElement('div');
-            tab.className = `flex items-center gap-2 px-3 py-2 rounded-t-lg cursor-pointer transition-all min-w-[130px] justify-between group relative ${activeClass}`;
+            tab.className = tabClass;
 
             tab.onclick = () => {
                 if (!isActive) store.switchSection(sec.id);
             };
 
-            // Name & Info wrapper
-            const info = document.createElement('div');
-            info.className = 'flex flex-col';
+            // Content
+            const nameClass = isActive ? "font-bold text-sm" : "font-medium text-xs";
+            const detailClass = isActive ? "text-[11px] opacity-100" : "text-[10px] opacity-80";
 
-            const nameClass = isActive ? 'text-white' : 'text-gray-800';
-            const detailClass = isActive ? 'text-blue-100' : 'text-gray-500';
-            const iconClass = isActive ? 'text-yellow-300' : shiftColor;
-
-            info.innerHTML = `
-                <span class="font-bold text-xs leading-tight ${nameClass}">${sec.name}</span>
-                <div class="flex items-center gap-1 mt-0.5">
-                    <span class="text-[10px] ${iconClass}">${shiftIcon}</span>
-                    <span class="text-[10px] ${detailClass} leading-tight">${sec.grade}º - ${sec.shift}</span>
+            tab.innerHTML = `
+                <div class="flex items-center justify-between w-full">
+                    <span class="${nameClass}">${sec.name}</span>
+                    <button class="delete-btn opacity-0 group-hover:opacity-100 text-[10px] ml-2 hover:text-red-500 hover:bg-red-100 rounded-full w-4 h-4 flex items-center justify-center transition-all ${isActive ? 'block' : 'hidden'}">✕</button>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="text-[10px] ${iconColor}">${shiftIcon}</span>
+                    <span class="${detailClass}">${sec.grade}º - ${sec.shift}</span>
                 </div>
             `;
 
-            // Delete Button (Small 'x')
-            const delBtn = document.createElement('button');
-            delBtn.className = `ml-2 text-[10px] w-4 h-4 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition-opacity ${isActive ? 'text-blue-200 opacity-50 hover:opacity-100' : 'text-gray-400 opacity-0 group-hover:opacity-100'}`;
-            delBtn.innerHTML = '✕';
-            delBtn.title = "Borrar sección";
-            delBtn.onclick = (e) => {
-                e.stopPropagation();
-                store.deleteSectionInternal(sec.id);
-            };
+            // Delete Action
+            const btn = tab.querySelector('.delete-btn');
+            if (btn) {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    store.deleteSectionInternal(sec.id);
+                };
+            }
 
-            tab.appendChild(info);
-            tab.appendChild(delBtn);
             container.appendChild(tab);
         });
 
-        // 2. "New Section" Button
-        const addBtn = document.createElement('button');
-        addBtn.className = "flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-700 hover:bg-green-200 font-bold border border-green-200 shadow-sm ml-2 self-center";
+        // 2. "New Section" Button (Small tab)
+        const addBtn = document.createElement('div');
+        addBtn.className = "flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-blue-50 text-gray-400 hover:text-blue-600 cursor-pointer ml-2 transition-colors border border-dashed border-gray-300 mb-1 opacity-70 hover:opacity-100";
         addBtn.title = "Crear Nueva Sección";
-        addBtn.innerHTML = '+';
+        addBtn.innerHTML = '<span class="text-xl font-bold">+</span>';
         addBtn.onclick = () => {
             AppUI.prompt("Nueva Sección", "Nombre de la Sección (ej: 4to A):", (name) => {
                 store.createNewSectionInternal(name, "1", "Matutina");
@@ -252,7 +355,7 @@ export const AppUI = {
     },
 
     // --- MODAL HELPERS ---
-    confirm: function (title, message, onOk, isDanger = false) {
+    confirm: function (title, message, onOk, isDanger = false, okLabel = "Aceptar") {
         const modal = document.getElementById('confirmModal');
         if (!modal) return alert(message); // Fallback
 
@@ -264,6 +367,7 @@ export const AppUI = {
 
         titleEl.innerText = title;
         msgEl.innerText = message;
+        btnOk.innerText = okLabel; // Dynamic Label
 
         // Visual Customization
         if (isDanger) {

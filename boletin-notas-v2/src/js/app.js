@@ -4,12 +4,15 @@
  * Refactored into Modular Architecture
  */
 
+// Modules
 import { store } from './modules/State.js';
 import { AppUI } from './modules/AppUI.js';
 import { Toast } from './modules/Toast.js';
 import { Events } from './modules/Events.js';
 import { PDFManager } from './modules/PDF.js';
 import { AppUtils } from './modules/AppUtils.js';
+import CloudStorage from './modules/CloudStorage.js';
+import { AuthManager } from './modules/AuthManager.js';
 
 // Global Instances (for debugging or legacy access if needed)
 export { store, Toast };
@@ -17,6 +20,8 @@ export { store, Toast };
 // Bootstrap Application
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Initialize Subsystems
+    CloudStorage.init();
+    AuthManager.init(); // <--- AUTHENTICATION START
     PDFManager.init();
     store.init();
     AppUI.init(); // Initialize UI bindings (Floating Controls, etc)

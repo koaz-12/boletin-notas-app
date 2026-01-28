@@ -20,6 +20,7 @@ export const PDFManager = {
     // New: Auto-load Template (Embedded Base64)
     loadTemplate: async function (grade) {
         console.log(`Cargando plantilla embebida para Grado ${grade}...`);
+        const isLoginVisible = !document.getElementById('login-overlay')?.classList.contains('hidden');
 
         try {
             // Import Templates Dynamically
@@ -50,7 +51,9 @@ export const PDFManager = {
                 btn.classList.add('bg-blue-600', 'text-white', 'ring-4', 'ring-blue-300');
                 btn.classList.remove('bg-white', 'text-blue-600', 'border-blue-700');
             }
-            Toast.success(`Plantilla de ${grade}º Grado cargada (Embebida).`);
+            if (!isLoginVisible) {
+                Toast.success(`Plantilla de ${grade}º Grado cargada (Embebida).`);
+            }
 
         } catch (e) {
             console.warn("Fallo carga plantilla embebida:", e);

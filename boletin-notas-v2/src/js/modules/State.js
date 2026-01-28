@@ -75,6 +75,12 @@ export class AppState {
     }
 
     resetState() {
+        // Try to load school defaults
+        let schoolDefaults = {};
+        try {
+            schoolDefaults = JSON.parse(localStorage.getItem('minerd_default_school_data') || '{}');
+        } catch (e) { }
+
         this.state = {
             grade: "1",
             subjects: [],
@@ -100,12 +106,12 @@ export class AppState {
             studentList: [],
             currentStudent: "Estudiante 1",
             schoolData: {
-                centro: "",
-                codigo: "",
+                centro: schoolDefaults.centro || "",
+                codigo: schoolDefaults.codigo || "",
                 tanda: "",
                 telefono: "",
-                regional: "",
-                distrito: "",
+                regional: schoolDefaults.regional || "",
+                distrito: schoolDefaults.distrito || "",
                 provincia: "",
                 municipio: "",
                 section: ""
@@ -432,6 +438,71 @@ export class AppState {
         if (currentId) {
             localStorage.removeItem('minerd_data_' + currentId);
             location.reload();
+        }
+    }
+
+    // --- CLOUD / BACKUP HELPERS ---
+    exportFullBackup() {
+        const sections = sectionManager.loadSections();
+        const backup = {
+            version: 2,
+            timestamp: Date.now(),
+            sections: sections,
+            data: {}
+        };
+
+        // Gather all section data
+        sections.forEach(sec => {
+            const key = 'minerd_data_' + sec.id;
+            const item = localStorage.getItem(key);
+            if (item) {
+                try {
+                    backup.data[sec.id] = JSON.parse(item);
+                } catch (e) {
+                    console.warn("Corrupt data for section " + sec.id);
+                }
+            }
+        });
+
+        return backup;
+    }
+
+    importFullBackup(backupObj) {
+        if (!backupObj || !backupObj.sections) return false;
+
+        try {
+            // 1. Restore Sections Index
+            localStorage.setItem('minerd_sections_index', JSON.stringify(backupObj.sections));
+            sectionManager.sections = sectionManager.loadSections(); // Refresh manager
+
+            // 2. Restore Data
+            if (backupObj.data) {
+                Object.keys(backupObj.data).forEach(secId => {
+                    const content = backupObj.data[secId];
+                    localStorage.setItem('minerd_data_' + secId, JSON.stringify(content));
+                });
+            }
+
+            // 3. Hot Reload State
+            // If we have sections, switch to the first one or keep current if exists
+            let targetId = sectionManager.currentSectionId;
+            if (!sectionManager.sections.find(s => s.id === targetId)) {
+                targetId = sectionManager.sections.length > 0 ? sectionManager.sections[0].id : null;
+            }
+
+            if (targetId) {
+                sectionManager.setCurrent(targetId);
+                this.resetState();
+                if (this.loadFromLocalStorage()) {
+                    // Loaded successfully
+                }
+                this.notify(); // Re-render everything
+            }
+
+            return true;
+        } catch (e) {
+            console.error("Import Failed:", e);
+            return false;
         }
     }
 }
