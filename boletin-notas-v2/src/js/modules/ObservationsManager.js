@@ -21,11 +21,15 @@ export const ObservationsManager = {
             "Muestra avances significativos en su proceso de aprendizaje.",
             "Es respetuoso y cumple con sus deberes escolares."
         ],
-        low: [
+        process: [
             "Evidencia que el estudiante aún se encuentra en proceso, mostrando un logro muy básico.",
-            "Evidencia que el estudiante ha alcanzado un desempeño insuficiente en los aspectos evaluados.",
             "Necesita reforzar los contenidos básicos y mejorar la dedicación.",
-            "Requiere mayor apoyo en el hogar y asistencia regular."
+            "Debe repasar los temas vistos en clase para mejorar su rendimiento."
+        ],
+        insufficient: [
+            "Evidencia un desempeño insuficiente en los aspectos evaluados.",
+            "Requiere mayor apoyo en el hogar y asistencia regular.",
+            "No ha alcanzado los objetivos mínimos del periodo."
         ],
         conduct: [
             "Conversa frecuentemente en clase.",
@@ -39,6 +43,7 @@ export const ObservationsManager = {
 
     init: function () {
         this.loadBank();
+        this.loadSettings();
         this.renderBankPanel();
         this.bindGlobalEvents();
 
@@ -47,6 +52,22 @@ export const ObservationsManager = {
             const inputs = document.querySelectorAll('textarea[data-action="updateObservation"]');
             this.attachToInputs(inputs);
         }, 500);
+    },
+
+    loadSettings: function () {
+        try {
+            const saved = localStorage.getItem('obs_settings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                const highIn = document.getElementById('input-range-high');
+                const avgIn = document.getElementById('input-range-avg');
+                const lowIn = document.getElementById('input-range-low');
+
+                if (highIn && settings.high) highIn.value = settings.high;
+                if (avgIn && settings.avg) avgIn.value = settings.avg;
+                if (lowIn && settings.low) lowIn.value = settings.low;
+            }
+        } catch (e) { console.error("Error loading obs settings", e); }
     },
 
     loadBank: function () {
@@ -106,10 +127,11 @@ export const ObservationsManager = {
                 <button id="btn-close-bank" class="text-white hover:text-gray-200 text-xl font-bold">&times;</button>
             </div>
             
-            <div class="p-3 bg-gray-50 border-b flex gap-2 overflow-x-auto">
-                <button class="tab-bank text-xs font-bold px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 whitespace-nowrap" data-cat="high">🌟 Alto (90-100)</button>
-                <button class="tab-bank text-xs font-bold px-3 py-1 rounded-full bg-gray-200 text-gray-600 whitespace-nowrap" data-cat="average">📝 Promedio</button>
-                <button class="tab-bank text-xs font-bold px-3 py-1 rounded-full bg-gray-200 text-gray-600 whitespace-nowrap" data-cat="low">⚠️ Refuerzo</button>
+            <div class="p-3 bg-gray-50 border-b flex gap-2 overflow-x-auto no-scrollbar">
+                <button class="tab-bank text-xs font-bold px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 whitespace-nowrap" data-cat="high">🌟 Destacado</button>
+                <button class="tab-bank text-xs font-bold px-3 py-1 rounded-full bg-gray-200 text-gray-600 whitespace-nowrap" data-cat="average">📝 Logrado</button>
+                <button class="tab-bank text-xs font-bold px-3 py-1 rounded-full bg-gray-200 text-gray-600 whitespace-nowrap" data-cat="process">⚠️ Proceso</button>
+                <button class="tab-bank text-xs font-bold px-3 py-1 rounded-full bg-gray-200 text-gray-600 whitespace-nowrap" data-cat="insufficient">🛑 Insuficiente</button>
                 <button class="tab-bank text-xs font-bold px-3 py-1 rounded-full bg-gray-200 text-gray-600 whitespace-nowrap" data-cat="conduct">🤝 Conducta</button>
             </div>
 
