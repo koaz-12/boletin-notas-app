@@ -316,17 +316,26 @@ export const ObservationsManager = {
             };
         }
 
+        // Save Range Settings on Change
+        ['input-range-high', 'input-range-low'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', () => {
+                    const h = document.getElementById('input-range-high').value;
+                    const l = document.getElementById('input-range-low').value;
+                    localStorage.setItem('obs_settings', JSON.stringify({ high: h, low: l }));
+                    Toast.success('Configuración actualizada');
+                });
+            }
+        });
+
         // Close on click outside (if needed)
         document.addEventListener('click', (e) => {
             const panel = document.getElementById('obs-bank-panel');
             if (panel && !panel.classList.contains('translate-x-full')) {
                 // Close if clicking outside panel AND not on a trigger button
-                // We add a check for .obs-tool-btn to prevent closing when clicking tools
                 if (!panel.contains(e.target) && !e.target.closest('#btn-open-phrase-bank') && !e.target.closest('.obs-tool-btn')) {
                     // Logic to stay open? 
-                    // Actually, let's keep it open unless explicit close usually.
-                    // But if user clicks the GRID, they might want to write.
-                    // So let's NOT auto-close strictly yet, user can close with X.
                 }
             }
         });
@@ -367,10 +376,14 @@ export const ObservationsManager = {
         let average = 0;
         if (count > 0) average = Math.round(total / count);
 
+        // Get Thresholds (Configurable)
+        const highThresh = parseInt(document.getElementById('input-range-high')?.value || 90);
+        const lowThresh = parseInt(document.getElementById('input-range-low')?.value || 70);
+
         // Map to Category
         let category = 'average';
-        if (average >= 90) category = 'high';
-        else if (average < 70) category = 'low';
+        if (average >= highThresh) category = 'high';
+        else if (average < lowThresh) category = 'low';
         else category = 'average';
 
         // Feedback
