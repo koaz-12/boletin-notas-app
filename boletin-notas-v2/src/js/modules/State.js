@@ -448,7 +448,14 @@ export class AppState {
             version: 2,
             timestamp: Date.now(),
             sections: sections,
-            data: {}
+            data: {},
+            // Export Global Settings
+            settings: {
+                theme: localStorage.getItem('minerd_theme'),
+                schoolDefaults: localStorage.getItem('minerd_default_school_data'),
+                commentBank: localStorage.getItem('minerd_comment_bank'),
+                obsSettings: localStorage.getItem('obs_settings')
+            }
         };
 
         // Gather all section data
@@ -481,6 +488,17 @@ export class AppState {
                     const content = backupObj.data[secId];
                     localStorage.setItem('minerd_data_' + secId, JSON.stringify(content));
                 });
+            }
+
+            // 2.5 Restore Global Settings
+            if (backupObj.settings) {
+                if (backupObj.settings.theme) localStorage.setItem('minerd_theme', backupObj.settings.theme);
+                if (backupObj.settings.schoolDefaults) localStorage.setItem('minerd_default_school_data', backupObj.settings.schoolDefaults);
+                if (backupObj.settings.commentBank) localStorage.setItem('minerd_comment_bank', backupObj.settings.commentBank);
+                if (backupObj.settings.obsSettings) localStorage.setItem('obs_settings', backupObj.settings.obsSettings);
+
+                // Notify modules to hot-reload settings
+                window.dispatchEvent(new Event('minerd:settings-restored'));
             }
 
             // 3. Hot Reload State

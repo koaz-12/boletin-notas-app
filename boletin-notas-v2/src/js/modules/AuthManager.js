@@ -267,6 +267,12 @@ export const AuthManager = {
                 }
             });
         }
+
+        // Listen for Global Restore
+        window.addEventListener('minerd:settings-restored', () => {
+            this.loadTheme();
+            console.log("AuthManager: Theme refreshed from cloud restore.");
+        });
     },
 
     loadTheme: function () {

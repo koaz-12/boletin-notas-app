@@ -397,6 +397,16 @@ export const ObservationsManager = {
                 }
             }
         });
+
+        // CLOUD SYNC: Reload Settings if restored
+        window.addEventListener('minerd:settings-restored', () => {
+            console.log("☁️ Settings Restored Event Received");
+            this.loadSettings();
+            this.loadBank();
+            if (document.getElementById('obs-bank-panel')) {
+                this.switchTab(this.activeCategory);
+            }
+        });
     },
 
     updateRangeDisplays: function () {
