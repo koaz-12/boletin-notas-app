@@ -200,17 +200,35 @@ export const ObservationsManager = {
             // Usage Click
             span.onclick = () => this.insertPhrase(phrase);
 
+            // Actions Container
+            const divActions = document.createElement('div');
+            divActions.className = "flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity";
+
+            // Edit Button
+            const btnEdit = document.createElement('button');
+            btnEdit.innerHTML = "✏️";
+            btnEdit.className = "text-xs hover:scale-125 transition-transform p-1";
+            btnEdit.title = "Editar Frase";
+            btnEdit.onclick = (e) => {
+                e.stopPropagation();
+                this.editPhrase(category, index);
+            };
+
             // Delete Button
             const btnDel = document.createElement('button');
-            btnDel.innerHTML = "&times;";
-            btnDel.className = "ml-2 text-gray-300 hover:text-red-500 font-bold px-1 opacity-0 group-hover:opacity-100 transition-opacity";
+            btnDel.innerHTML = "🗑️";
+            btnDel.className = "text-xs text-gray-300 hover:text-red-500 p-1 hover:scale-125 transition-transform";
+            btnDel.title = "Eliminar Frase";
             btnDel.onclick = (e) => {
                 e.stopPropagation();
                 this.deletePhrase(category, index);
             };
 
+            divActions.appendChild(btnEdit);
+            divActions.appendChild(btnDel);
+
             div.appendChild(span);
-            div.appendChild(btnDel);
+            div.appendChild(divActions);
             container.appendChild(div);
         });
     },
@@ -238,6 +256,17 @@ export const ObservationsManager = {
         this.switchTab(this.activeCategory); // Refresh
         input.value = "";
         Toast.success("Frase añadida al banco.");
+    },
+
+    editPhrase: function (category, index) {
+        const oldText = this.userBank[category][index];
+        const newText = prompt("Editar frase:", oldText);
+        if (newText !== null && newText.trim() !== "") {
+            this.userBank[category][index] = newText.trim();
+            this.saveBank();
+            this.switchTab(category);
+            Toast.success("Frase actualizada");
+        }
     },
 
     deletePhrase: function (category, index) {
