@@ -10,25 +10,22 @@ export const ObservationsManager = {
     // Default Phrases (Fallback)
     defaultBank: {
         high: [
-            "Muestra un excelente desempeño académico.",
-            "Participa activamente en todas las actividades.",
-            "Es un estudiante muy dedicado y responsable.",
-            "Demuestra gran interés por aprender.",
-            "Su conducta es ejemplar."
+            "Evidencia que el estudiante ha alcanzado un desempeño destacado con relación a los aspectos evaluados.",
+            "Muestra un excelente desempeño académico y participa activamente.",
+            "Es un estudiante muy dedicado y responsable en todas las actividades.",
+            "Demuestra gran interés por aprender y supera las expectativas."
         ],
         average: [
-            "Cumple con las asignaciones requeridas.",
-            "Debe participar más en clase.",
-            "Muestra avances significativos.",
-            "Es respetuoso con sus compañeros.",
-            "Debe mejorar la puntualidad en la entrega de tareas."
+            "Evidencia que el estudiante ha logrado, en general, los aprendizajes esperados.",
+            "Cumple con las asignaciones requeridas aunque debe participar más.",
+            "Muestra avances significativos en su proceso de aprendizaje.",
+            "Es respetuoso y cumple con sus deberes escolares."
         ],
         low: [
-            "Necesita reforzar los contenidos básicos.",
-            "Debe mejorar su caligrafía y ortografía.",
-            "Requiere mayor apoyo en el hogar.",
-            "Se distrae con facilidad en clase.",
-            "Debe asistir con mayor regularidad."
+            "Evidencia que el estudiante aún se encuentra en proceso, mostrando un logro muy básico.",
+            "Evidencia que el estudiante ha alcanzado un desempeño insuficiente en los aspectos evaluados.",
+            "Necesita reforzar los contenidos básicos y mejorar la dedicación.",
+            "Requiere mayor apoyo en el hogar y asistencia regular."
         ],
         conduct: [
             "Conversa frecuentemente en clase.",
