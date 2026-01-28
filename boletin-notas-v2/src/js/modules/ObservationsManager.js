@@ -336,13 +336,18 @@ export const ObservationsManager = {
         }
 
         // Save Range Settings on Change
-        ['input-range-high', 'input-range-low'].forEach(id => {
+        ['input-range-high', 'input-range-avg', 'input-range-low'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
+                // Real-time
+                el.addEventListener('input', () => { if (this.updateRangeDisplays) this.updateRangeDisplays(); });
+                // Persistence
                 el.addEventListener('change', () => {
                     const h = document.getElementById('input-range-high').value;
+                    const a = document.getElementById('input-range-avg').value;
                     const l = document.getElementById('input-range-low').value;
-                    localStorage.setItem('obs_settings', JSON.stringify({ high: h, low: l }));
+                    localStorage.setItem('obs_settings', JSON.stringify({ high: h, avg: a, low: l }));
+                    if (this.updateRangeDisplays) this.updateRangeDisplays();
                     Toast.success('Configuración actualizada');
                 });
             }
@@ -358,6 +363,24 @@ export const ObservationsManager = {
                 }
             }
         });
+    },
+
+    updateRangeDisplays: function () {
+        const hVal = parseInt(document.getElementById('input-range-high')?.value || 89);
+        const aVal = parseInt(document.getElementById('input-range-avg')?.value || 77);
+        const lVal = parseInt(document.getElementById('input-range-low')?.value || 65);
+
+        // Logrado Max = Destacado Min - 1
+        const dispAvgMax = document.getElementById('disp-range-avg-max');
+        if (dispAvgMax) dispAvgMax.textContent = (hVal - 1);
+
+        // Proceso Max = Logrado Min - 1
+        const dispLowMax = document.getElementById('disp-range-low-max');
+        if (dispLowMax) dispLowMax.textContent = (aVal - 1);
+
+        // Insuficiente Max = Proceso Min - 1
+        const dispInsMax = document.getElementById('disp-range-ins-max');
+        if (dispInsMax) dispInsMax.textContent = (lVal - 1);
     },
 
     handleMagicSuggest: function (input) {
