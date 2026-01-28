@@ -18,6 +18,10 @@
     <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
+    <!-- JSZip -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
     <!-- Parse SDK (Back4App) -->
     <script src="https://npmcdn.com/parse/dist/parse.min.js"></script>
 
@@ -562,8 +566,15 @@
                 <!-- Batch Print -->
                 <button id="btnPrintBatch"
                     class="bg-purple-600 text-white w-10 h-10 rounded-full shadow-lg hover:bg-purple-700 hover:scale-105 flex items-center justify-center transition-transform"
-                    title="Imprimir TODOS (PDF)">
+                    title="Imprimir TODOS (Un solo PDF)">
                     <span class="text-lg">📚</span>
+                </button>
+
+                <!-- Batch Zip -->
+                <button id="btnZipBatch"
+                    class="bg-orange-500 text-white w-10 h-10 rounded-full shadow-lg hover:bg-orange-600 hover:scale-105 flex items-center justify-center transition-transform"
+                    title="Descargar TODOS (PDFs Individuales en ZIP)">
+                    <span class="text-lg">📦</span>
                 </button>
 
                 <!-- Backup -->

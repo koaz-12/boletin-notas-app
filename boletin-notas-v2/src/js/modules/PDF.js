@@ -223,5 +223,74 @@ export const PDFManager = {
                 }
             }
         );
+    },
+
+    // Zip Individual Export
+    generateBatchZip: async function () {
+        if (typeof JSZip === 'undefined') {
+            Toast.error("Error: Librería JSZip no cargada.");
+            return;
+        }
+
+        const state = store.getState();
+        const students = state.studentList;
+
+        if (students.length === 0) {
+            Toast.warning("No hay estudiantes para exportar.");
+            return;
+        }
+
+        const confirmExport = confirm(`Se generarán ${students.length} archivos PDF comprimidos en un ZIP.\n\nEste proceso puede tardar unos minutos.\nPor favor, NO cierres la pestaña.\n\n¿Continuar?`);
+        if (!confirmExport) return;
+
+        Toast.info("Iniciando generación masiva... (Por favor espera)");
+
+        const zip = new JSZip();
+        const initialStudent = state.currentStudent;
+
+        try {
+            const container = document.getElementById('report-container');
+
+            // Ensure visual fidelity
+            // container.style.width = '210mm'; // A4 width forced (Usually controlled by CSS)
+
+            // Loop sequentially
+            for (let i = 0; i < students.length; i++) {
+                const studentName = students[i];
+                store.loadStudent(studentName);
+
+                // Wait for render (DOM update)
+                await new Promise(r => setTimeout(r, 200));
+
+                // Config PDF
+                const opts = {
+                    margin: 0,
+                    filename: `${studentName}.pdf`,
+                    image: { type: 'jpeg', quality: 0.95 },
+                    html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: 'css', after: '.a4-page' }
+                };
+
+                const blob = await html2pdf().set(opts).from(container).output('blob');
+                zip.file(`${studentName}.pdf`, blob);
+
+                // Progress Helper
+                console.log(`PDF Generated: ${studentName}`);
+            }
+
+            // Generate ZIP
+            Toast.success("Comprimiendo archivos...");
+            const content = await zip.generateAsync({ type: "blob" });
+            saveAs(content, `Boletines_${state.grade}Grado_${new Date().toISOString().slice(0, 10)}.zip`);
+            Toast.success("¡Exportación completada! Descargando ZIP.");
+
+        } catch (e) {
+            console.error(e);
+            Toast.error("Error en exportación masiva: " + e.message);
+        } finally {
+            // Restore
+            if (initialStudent) store.loadStudent(initialStudent);
+        }
     }
 };
