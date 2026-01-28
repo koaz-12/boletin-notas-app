@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe de Aprendizaje - Nivel Primario</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- SheetJS (XLSX) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <!-- html2pdf.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="src/css/styles.css?v=3">
+</head>
+
+<body class="bg-gray-200">
+
+    <!-- TITULO PRINCIPAL -->
+    <div class="max-w-7xl mx-auto text-center mt-6 mb-4 no-print">
+        <h1 class="text-3xl font-bold text-blue-800 tracking-tight">Generador de Informe de Aprendizaje</h1>
+        <p class="text-gray-600 mt-1">Ministerio de Educación de la República Dominicana</p>
+    </div>
+
+    <!-- SECTIONS BAR (Multi-Tanda / Grado) -->
+    <!-- Removed 'mt-4' and added 'rounded-t-lg' to container logic via JS, 
+         here we ensure it sits flush with panel below -->
+    <div id="sections-bar" class="max-w-7xl mx-auto mt-0 px-1 no-print relative -mb-px z-10">
+        <div class="flex items-center gap-2 overflow-x-auto pb-0" id="sections-container">
+            <!-- Tabs injected by JS -->
+            <div class="text-sm text-gray-500 italic">Cargando secciones...</div>
+        </div>
+    </div>
+
+    <!-- PANEL DE CONTROL PRINCIPAL (Pestañas + Configuración) -->
+    <!-- Removed 'mt-6', added 'rounded-t-none' (actually rounded-tr-lg for top right visual if needed, 
+         but generally standard rounded is fine if tabs sit on top). 
+         Let's strip top margin to 0 and top rounded corners to 0? 
+         But main panel has padding. Let's keep it clean. 
+         Ideally: Bar sits ON TOP of panel. Panel has no top margin. -->
+    <div id="main-control-panel"
+        class="no-print max-w-7xl mx-auto p-6 bg-white shadow-md rounded-b-lg rounded-tr-lg font-sans border-t border-gray-200">
+
+        <!-- Header -->
+        <h1 class="text-2xl font-bold text-blue-800 mb-6 border-b pb-2">Generador de Informe de Aprendizaje <span
+                id="dispHeaderGrade">(1er Grado)</span>
+        </h1>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- COLUMNA IZQUIERDA (Pestañas - 2/3 ancho) -->
+            <div class="lg:col-span-8">
+
+                <!-- Barra de Pestañas -->
+                <div class="flex border-b border-gray-200 mb-6 gap-4">
+                    <button id="btnTabData" class="tab-btn tab-active px-6 py-2 text-lg focus:outline-none">
+                        📝 Datos Generales
+                    </button>
+                    <button id="btnTabGrades" class="tab-btn px-6 py-2 text-lg focus:outline-none">
+                        📊 Calificaciones
+                    </button>
+                    <button id="btnTabObs" class="tab-btn px-6 py-2 text-lg focus:outline-none">
+                        📋 Obs. y Asistencia
+                    </button>
+                </div>
+
+                <!-- CONTENIDO: DATOS (Tab 1) -->
+                <div id="tab-content-data" class="animate-fade-in">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                        <!-- 1. Datos del Centro -->
+                        <div class="space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                            <h2 class="font-semibold text-gray-700 border-b pb-1 text-sm uppercase">1. Datos del Centro
+                            </h2>
+                            <input type="text" id="inputCentro" placeholder="Nombre del Centro Educativo"
+                                class="border p-2 rounded w-full text-sm">
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="text" id="inputCodigo" placeholder="Código de Centro"
+                                    class="border p-2 rounded w-full text-sm">
+                                <input type="text" id="inputTanda" placeholder="Tanda"
+                                    class="border p-2 rounded w-full text-sm">
+                            </div>
+                            <input type="text" id="inputTelefono" placeholder="Teléfono del Centro"
+                                class="border p-2 rounded w-full text-sm">
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="text" id="inputRegional" placeholder="Regional"
+                                    class="border p-2 rounded w-full text-sm">
+                                <input type="text" id="inputDistrito" placeholder="Distrito"
+                                    class="border p-2 rounded w-full text-sm">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="text" id="inputProvincia" placeholder="Provincia"
+                                    class="border p-2 rounded w-full text-sm">
+                                <input type="text" id="inputMunicipio" placeholder="Municipio"
+                                    class="border p-2 rounded w-full text-sm">
+                            </div>
+                        </div>
+
+                        <!-- 2. Datos del Estudiante -->
+                        <div class="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                            <h2 class="font-semibold text-gray-700 border-b pb-1 text-sm uppercase">2. Datos del
+                                Estudiante</h2>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="flex items-center gap-1">
+                                    <span class="text-gray-500 text-xs font-bold">20</span>
+                                    <input type="text" id="inputYear1" value="24" placeholder="24"
+                                        class="border p-1 rounded w-full text-xs text-center h-6">
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <span class="text-gray-500 text-xs font-bold">20</span>
+                                    <input type="text" id="inputYear2" value="25" placeholder="25"
+                                        class="border p-1 rounded w-full text-xs text-center h-6">
+                                </div>
+                            </div>
+                            <!-- Seccion / Orden -->
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="text" id="inputSeccion" placeholder="Sección"
+                                    class="border p-1 rounded w-full text-xs h-6">
+                                <input type="text" id="inputOrden" placeholder="No. Orden"
+                                    class="border p-1 rounded w-full text-xs h-6">
+                            </div>
+
+                            <!-- Nombres / Apellidos -->
+                            <input type="text" id="inputNombres" placeholder="Nombre(s)"
+                                class="border p-1 rounded w-full text-xs h-6">
+                            <input type="text" id="inputApellidos" placeholder="Apellido(s)"
+                                class="border p-1 rounded w-full text-xs h-6">
+
+                            <!-- ID / Docente (Merged) -->
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="text" id="inputID" placeholder="ID (RNE/SIGERD)"
+                                    class="border p-1 rounded w-full text-xs h-6">
+                                <input type="text" id="inputDocente" placeholder="Docente"
+                                    class="border p-1 rounded w-full text-xs h-6">
+                            </div>
+
+                            <!-- SITUACIÓN DEL ESTUDIANTE (Compact Vertical) -->
+                            <div id="containerSituacionFinal" class="border p-2 rounded bg-white">
+                                <label
+                                    class="block text-[10px] font-bold text-gray-400 mb-1 text-center uppercase tracking-wider">Situación
+                                    Final</label>
+                                <div class="flex justify-between px-2 gap-2">
+                                    <div class="flex flex-col items-center w-full">
+                                        <label class="text-[10px] font-bold text-gray-600 mb-0.5">Promovido</label>
+                                        <input type="text" id="checkPromovido" data-action="updateStatus"
+                                            data-field="promoted"
+                                            class="border p-1 rounded w-full text-center text-xs font-bold bg-gray-50 focus:bg-white transition-colors h-6"
+                                            placeholder="X">
+                                    </div>
+                                    <div class="flex flex-col items-center w-full">
+                                        <label class="text-[10px] font-bold text-gray-600 mb-0.5">Aplazado</label>
+                                        <input type="text" id="checkAplazado" data-action="updateStatus"
+                                            data-field="postponed"
+                                            class="border p-1 rounded w-full text-center text-xs font-bold bg-gray-50 focus:bg-white transition-colors h-6"
+                                            placeholder="X">
+                                    </div>
+                                    <div class="flex flex-col items-center w-full">
+                                        <label class="text-[10px] font-bold text-gray-600 mb-0.5">Repitente</label>
+                                        <input type="text" id="checkRepitente" data-action="updateStatus"
+                                            data-field="repeater"
+                                            class="border p-1 rounded w-full text-center text-xs font-bold bg-gray-50 focus:bg-white transition-colors h-6"
+                                            placeholder="X">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CONDICIÓN FINAL -->
+                            <input type="text" id="inputCondicion" placeholder="Condición Final del Estudiante"
+                                data-action="updateFinalCondition" class="border p-2 rounded w-full text-sm mb-2">
+
+                            <!-- OBSERVACIONES GENERALES (Página 1) -->
+                            <textarea id="inputObsGeneral" placeholder="Observaciones (Página 1)"
+                                class="border p-2 rounded w-full text-sm h-16"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTENIDO: CALIFICACIONES (Tab 2) -->
+                <div id="tab-content-grades" class="hidden animate-fade-in">
+                    <div class="mb-4">
+                        <p class="text-gray-600 text-sm italic mb-2">💡 Ingresa las notas directamente en la cuadrícula.
+                            Los cambios se guardan automáticamente.</p>
+                        <!-- Grid Container -->
+                        <div id="entry-grid-container"
+                            class="overflow-x-auto shadow-sm border rounded-lg bg-white min-h-[400px]">
+                            <!-- JS Renders Table Here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTENIDO: OBSERVACIONES Y ASISTENCIA (Tab 3) -->
+                <div id="tab-content-obs" class="hidden animate-fade-in space-y-6">
+
+                    <!-- Observaciones -->
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                        <h2 class="font-semibold text-gray-700 border-b pb-2 mb-4 text-sm uppercase">Observaciones del
+                            Docente</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Período 1:</label>
+                                <textarea id="obs_p1" data-action="updateObservation" data-period="p1" rows="3"
+                                    class="w-full border p-2 rounded text-xs focus:ring-2 focus:ring-blue-200 focus:outline-none"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Período 2:</label>
+                                <textarea id="obs_p2" data-action="updateObservation" data-period="p2" rows="3"
+                                    class="w-full border p-2 rounded text-xs focus:ring-2 focus:ring-blue-200 focus:outline-none"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Período 3:</label>
+                                <textarea id="obs_p3" data-action="updateObservation" data-period="p3" rows="3"
+                                    class="w-full border p-2 rounded text-xs focus:ring-2 focus:ring-blue-200 focus:outline-none"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Período 4:</label>
+                                <textarea id="obs_p4" data-action="updateObservation" data-period="p4" rows="3"
+                                    class="w-full border p-2 rounded text-xs focus:ring-2 focus:ring-blue-200 focus:outline-none"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Asistencia -->
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                        <h2 class="font-semibold text-gray-700 border-b pb-2 mb-4 text-sm uppercase">Asistencia</h2>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-center border-collapse border border-gray-300">
+                                <thead class="bg-gray-200 font-bold">
+                                    <tr>
+                                        <th class="p-2 border">Período</th>
+                                        <th class="p-2 border">Presente</th>
+                                        <th class="p-2 border">Ausente</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="p-2 border font-bold">P1</td>
+                                        <td class="p-2 border"><input type="text" data-action="updateAttendance"
+                                                data-period="p1" data-field="pres"
+                                                class="w-full text-center border-b focus:outline-none" placeholder="0">
+                                        </td>
+                                        <td class="p-2 border"><input type="text" data-action="updateAttendance"
+                                                data-period="p1" data-field="abs"
+                                                class="w-full text-center border-b focus:outline-none" placeholder="0">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2 border font-bold">P2</td>
+                                        <td class="p-2 border"><input type="text" data-action="updateAttendance"
+                                                data-period="p2" data-field="pres"
+                                                class="w-full text-center border-b focus:outline-none" placeholder="0">
+                                        </td>
+                                        <td class="p-2 border"><input type="text" data-action="updateAttendance"
+                                                data-period="p2" data-field="abs"
+                                                class="w-full text-center border-b focus:outline-none" placeholder="0">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2 border font-bold">P3</td>
+                                        <td class="p-2 border"><input type="text" data-action="updateAttendance"
+                                                data-period="p3" data-field="pres"
+                                                class="w-full text-center border-b focus:outline-none" placeholder="0">
+                                        </td>
+                                        <td class="p-2 border"><input type="text" data-action="updateAttendance"
+                                                data-period="p3" data-field="abs"
+                                                class="w-full text-center border-b focus:outline-none" placeholder="0">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2 border font-bold">P4</td>
+                                        <td class="p-2 border"><input type="text" data-action="updateAttendance"
+                                                data-period="p4" data-field="pres"
+                                                class="w-full text-center border-b focus:outline-none" placeholder="0">
+                                        </td>
+                                        <td class="p-2 border"><input type="text" data-action="updateAttendance"
+                                                data-period="p4" data-field="abs"
+                                                class="w-full text-center border-b focus:outline-none" placeholder="0">
+                                        </td>
+                                    </tr>
+                                    <!-- ANNUAL PERC ROW -->
+                                    <tr class="bg-blue-50 font-bold">
+                                        <td class="p-2 border">% ANUAL</td>
+                                        <td class="p-2 border"><input type="text" id="att-total-perc"
+                                                data-action="updateAttendance" data-period="total" data-field="perc"
+                                                class="w-full text-center border-b bg-transparent focus:outline-none text-blue-800"
+                                                placeholder="% Asis">
+                                        </td>
+                                        <td class="p-2 border"><input type="text" id="att-total-perc_abs"
+                                                data-action="updateAttendance" data-period="total" data-field="perc_abs"
+                                                class="w-full text-center border-b bg-transparent focus:outline-none text-red-800"
+                                                placeholder="% Aus">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- COLUMNA DERECHA (Configuración - 1/3 ancho) -->
+            <div class="lg:col-span-4 border-t lg:border-t-0 lg:border-l pl-0 lg:pl-6 pt-6 lg:pt-0">
+
+                <!-- 3. Configuración -->
+                <div class="space-y-2 sticky top-6">
+                    <h2 class="font-semibold text-gray-700 border-b pb-1">3. Configuración</h2>
+
+                    <!-- Toggles Principales -->
+                    <!-- Toggles Principales (Movidos a Botones Flotantes) -->
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Fondo PDF (Plantilla)</label>
+                        <input type="file" id="pdfUpload" accept=".pdf"
+                            class="w-full text-xs text-gray-500 file:mr-2 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border rounded-lg p-1">
+                    </div>
+
+                    <!-- Subir Excel (Simplificado) - MOVED HERE -->
+                    <div class="mb-4">
+                        <div
+                            class="border-2 border-dashed border-blue-200 p-2 rounded-lg text-center hover:bg-blue-50 transition cursor-pointer relative flex items-center justify-center gap-2 group">
+                            <input type="file" id="excelFile" accept=".xlsx, .xls" multiple
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            <span class="text-xl">📂</span>
+                            <span class="text-blue-600 font-bold text-xs group-hover:text-blue-800">Importar
+                                Excel</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        <!-- Student Navigator (Roster) -->
+                        <div id="studentNavigator" class="bg-blue-50 p-3 rounded border border-blue-200">
+                            <h3 class="font-bold text-gray-700 mb-2 flex items-center justify-between text-xs">
+                                <span>🎓 Lista de Clase</span>
+                                <span id="studentCountBadge"
+                                    class="bg-blue-200 text-blue-800 text-[10px] px-2 py-0.5 rounded-full">0</span>
+                            </h3>
+                            <select id="studentSelector"
+                                class="w-full border p-1 rounded text-xs font-semibold text-gray-800 bg-white focus:border-blue-500 outline-none mb-2">
+                                <!-- Populated by JS -->
+                            </select>
+
+                            <div class="flex gap-2 mb-2">
+                                <button id="btnPrevStudent"
+                                    class="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+                                    title="Anterior">◀</button>
+                                <button id="btnAddStudent"
+                                    class="px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded text-xs font-bold flex-1"
+                                    title="Nuevo Estudiante">+ Nuevo</button>
+                                <button id="btnDeleteStudent"
+                                    class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded text-xs font-bold"
+                                    title="Eliminar Estudiante">🗑️</button>
+                                <button id="btnNextStudent"
+                                    class="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+                                    title="Siguiente">▶</button>
+                            </div>
+                            <div class="flex mb-2">
+                                <button id="btnDeleteAllStudents"
+                                    class="w-full px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded text-xs font-bold border border-red-200 transition-colors">
+                                    ⚠️ Eliminar TODOS
+                                </button>
+                            </div>
+                            <div class="flex gap-1 mb-2 items-center">
+                                <select id="gradeSelector" class="w-full border p-1 rounded text-[10px] bg-gray-50 h-7">
+                                    <option value="1">1er Grado</option>
+                                    <option value="2">2do Grado</option>
+                                    <option value="3">3er Grado</option>
+                                    <option value="4">4to Grado</option>
+                                    <option value="5">5to Grado</option>
+                                    <option value="6">6to Grado</option>
+                                </select>
+                            </div>
+
+                            <!-- Layout Actions -->
+                            <div class="flex gap-1 mb-2">
+                                <button id="btnExportLayout"
+                                    class="flex-1 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded px-2 py-1 text-[10px] font-bold hover:bg-yellow-200"
+                                    title="Copiar Configuración de Posiciones">
+                                    💾 Guardar Diseño
+                                </button>
+                                <label
+                                    class="flex-1 bg-gray-100 text-gray-700 border border-gray-200 rounded px-2 py-1 text-[10px] font-bold hover:bg-gray-200 cursor-pointer text-center"
+                                    title="Cargar Configuración de Posiciones">
+                                    📂 Cargar
+                                    <input type="file" id="importLayoutFile" accept=".json" class="hidden">
+                                </label>
+                            </div>
+
+
+
+                            <div class="border-t pt-2 mb-2">
+                                <p class="text-[10px] font-bold text-gray-500 mb-1">TAMAÑO DE LETRA</p>
+                                <div class="flex items-center gap-2 bg-gray-100 p-1 rounded justify-center">
+                                    <button id="btnDecreaseFont"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 font-bold">-</button>
+                                    <span id="dispFontSize"
+                                        class="text-xs font-mono font-bold w-6 text-center">11</span>
+                                    <button id="btnIncreaseFont"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 font-bold">+</button>
+                                </div>
+                            </div>
+
+                            <div class="border-t pt-2 mb-2">
+                                <p class="text-[10px] font-bold text-gray-500 mb-1">ESTILO (Página 1)</p>
+                                <div class="flex gap-1 justify-center bg-gray-100 p-1 rounded">
+                                    <button id="btnAlignLeftP1"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 text-xs"
+                                        title="Izquierda (P1)">⬅️</button>
+                                    <button id="btnAlignCenterP1"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 text-xs"
+                                        title="Centro (P1)">⏺️</button>
+                                    <button id="btnAlignRightP1"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 text-xs"
+                                        title="Derecha (P1)">➡️</button>
+                                    <button id="btnBoldP1"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 text-xs font-bold"
+                                        title="Negrita (P1)">B</button>
+                                </div>
+                            </div>
+
+                            <div class="border-t pt-2 mb-2">
+                                <p class="text-[10px] font-bold text-gray-500 mb-1">ESTILO (P2 - Calif.)</p>
+                                <div class="flex gap-1 justify-center bg-gray-100 p-1 rounded">
+                                    <button id="btnAlignLeftP2G"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 text-xs"
+                                        title="Izquierda (P2 Notas)">⬅️</button>
+                                    <button id="btnAlignCenterP2G"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 text-xs"
+                                        title="Centro (P2 Notas)">⏺️</button>
+                                    <button id="btnAlignRightP2G"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 text-xs"
+                                        title="Derecha (P2 Notas)">➡️</button>
+                                    <button id="btnBoldP2G"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 text-xs font-bold"
+                                        title="Negrita (P2 Notas)">B</button>
+                                </div>
+                            </div>
+
+                            <div class="border-t pt-2 mb-2">
+                                <p class="text-[10px] font-bold text-gray-500 mb-1">ESTILO (P2 - Obs/Asist)</p>
+                                <div class="flex gap-1 justify-center bg-gray-100 p-1 rounded">
+                                    <button id="btnAlignLeftP2O"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 text-xs"
+                                        title="Izquierda (P2 Obs)">⬅️</button>
+                                    <button id="btnAlignCenterP2O"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 text-xs"
+                                        title="Centro (P2 Obs)">⏺️</button>
+                                    <button id="btnAlignRightP2O"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 text-xs"
+                                        title="Derecha (P2 Obs)">➡️</button>
+                                    <button id="btnBoldP2O"
+                                        class="bg-white border rounded px-2 hover:bg-gray-200 text-xs font-bold"
+                                        title="Negrita (P2 Obs)">B</button>
+                                </div>
+                            </div>
+
+                            <!-- (Removed Custom Subjects) -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Export Buttons -->
+        <div class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 print:hidden items-end">
+
+            <!-- CONTROLS LIST (Collapsible) -->
+            <div id="floatingControlsList" class="flex flex-col gap-2 mb-2 transition-all origin-bottom">
+
+                <!-- Individual Print -->
+                <button onclick="window.print()"
+                    class="bg-blue-600 text-white w-10 h-10 rounded-full shadow-lg hover:bg-blue-700 hover:scale-105 flex items-center justify-center transition-transform"
+                    title="Imprimir Individual (PDF)">
+                    <span class="text-lg">🖨️</span>
+                </button>
+
+                <!-- Edit Mode Toggle -->
+                <button id="btnFloatEdit"
+                    class="bg-white text-gray-600 w-10 h-10 rounded-full shadow-lg hover:bg-red-50 hover:text-red-600 hover:scale-105 flex items-center justify-center border border-gray-200 transition-transform"
+                    title="Modo Edición (Mover Casillas)">
+                    <span class="text-lg">✏️</span>
+                </button>
+
+                <!-- Overlay Toggle -->
+                <button id="btnFloatOverlay"
+                    class="bg-blue-600 text-white w-10 h-10 rounded-full shadow-lg hover:bg-blue-700 hover:scale-105 flex items-center justify-center border border-blue-700 transition-transform"
+                    title="Vista Previa (Plantilla)">
+                    <span class="text-lg">👁️</span>
+                </button>
+
+                <!-- Batch Print -->
+                <button id="btnPrintBatch"
+                    class="bg-purple-600 text-white w-10 h-10 rounded-full shadow-lg hover:bg-purple-700 hover:scale-105 flex items-center justify-center transition-transform"
+                    title="Imprimir TODOS (PDF)">
+                    <span class="text-lg">📚</span>
+                </button>
+
+                <!-- Backup -->
+                <button id="btnExportProject"
+                    class="bg-gray-800 text-white w-10 h-10 rounded-full shadow-lg hover:bg-gray-900 hover:scale-105 flex items-center justify-center opacity-80 hover:opacity-100 transition-transform"
+                    title="Guardar Copia de Seguridad">
+                    <span class="text-lg">💾</span>
+                </button>
+            </div>
+
+            <!-- TOGGLE BUTTON (Always Visible) -->
+            <button id="btnToggleControls"
+                class="bg-gray-200 text-gray-700 w-8 h-8 rounded-full shadow-md hover:bg-gray-300 flex items-center justify-center transition-transform"
+                title="Mostrar/Ocultar Controles">
+                <span id="iconToggle" class="text-sm font-bold">⚙️</span>
+            </button>
+
+        </div>
+
+    </div>
+    </div>
+
+    <!-- CONTENEDOR DEL REPORTE (Para exportar todo junto) -->
+    <div id="report-container">
+
+        <h3 class="no-print text-center text-gray-500 font-bold mb-2">Página 1 (Portada)</h3>
+        <!-- PÁGINA 1 -->
+        <div id="page-1" class="a4-page relative shadow-lg mb-8 border border-gray-400">
+            <!-- Canvas Fondo -->
+            <canvas id="canvas-page-1" class="pdf-canvas absolute inset-0 w-full h-full z-0"></canvas>
+
+            <!-- Contenido (RESTAURADO) -->
+            <div class="content-layer relative z-10 w-full h-full">
+
+                <!-- Información del Centro y Estudiante -->
+                <div id="dragInfo" class="text-sm">
+
+                    <!-- Año Escolar 1 -->
+                    <div id="field_year1"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 50px; left: 50px; width: 40px; height: 20px;">
+                        <span id="dispYear1">24</span>
+                    </div>
+                    <div id="field_year2"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 50px; left: 100px; width: 40px; height: 20px;">
+                        <span id="dispYear2">25</span>
+                    </div>
+
+                    <!-- Sección -->
+                    <div id="field_section"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 80px; left: 50px; width: 100px; height: 20px;">
+                        <span id="dispSeccion"></span>
+                    </div>
+
+                    <!-- Orden -->
+                    <div id="field_orden"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 80px; left: 300px; width: 50px; height: 20px;">
+                        <span id="dispOrden"></span>
+                    </div>
+
+                    <!-- Nombres -->
+                    <div id="field_nombres"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 110px; left: 50px; width: 300px; height: 20px;">
+                        <span id="dispNombres"></span>
+                    </div>
+
+                    <!-- Apellidos -->
+                    <div id="field_apellidos"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 140px; left: 50px; width: 300px; height: 20px;">
+                        <span id="dispApellidos"></span>
+                    </div>
+
+                    <!-- ID Estudiante -->
+                    <div id="field_id"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 170px; left: 50px; width: 200px; height: 20px;">
+                        <span id="dispID"></span>
+                    </div>
+
+                    <!-- Docente -->
+                    <div id="field_docente"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 200px; left: 50px; width: 300px; height: 20px;">
+                        <span id="dispDocente"></span>
+                    </div>
+
+                    <!-- Centro Educativo -->
+                    <div id="field_centro"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 230px; left: 50px; width: 300px; height: 20px;">
+                        <span id="dispCentro"></span>
+                    </div>
+
+                    <!-- Código -->
+                    <div id="field_codigo"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 260px; left: 50px; width: 100px; height: 20px;">
+                        <span id="dispCodigo"></span>
+                    </div>
+
+                    <!-- Tanda -->
+                    <div id="field_tanda"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 260px; left: 300px; width: 100px; height: 20px;">
+                        <span id="dispTanda"></span>
+                    </div>
+
+                    <!-- Teléfono -->
+                    <div id="field_telefono"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 290px; left: 50px; width: 150px; height: 20px;">
+                        <span id="dispTelefono"></span>
+                    </div>
+
+                    <!-- Distrito -->
+                    <div id="field_distrito"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 320px; left: 50px; width: 100px; height: 20px;">
+                        <span id="dispDistrito"></span>
+                    </div>
+
+                    <!-- Regional -->
+                    <div id="field_regional"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 320px; left: 300px; width: 100px; height: 20px;">
+                        <span id="dispRegional"></span>
+                    </div>
+
+                    <!-- Provincia -->
+                    <div id="field_provincia"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 350px; left: 50px; width: 200px; height: 20px;">
+                        <span id="dispProvincia"></span>
+                    </div>
+
+                    <!-- Municipio -->
+                    <div id="field_municipality"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-center dynamic-justify pl-1"
+                        style="top: 380px; left: 50px; width: 200px; height: 20px;">
+                        <span id="dispMunicipio"></span>
+                    </div>
+
+                    <!-- Observaciones Generales (P1) -->
+                    <div id="field_obs_general"
+                        class="draggable-field absolute resize-both overflow-hidden border border-transparent hover:border-blue-300 flex items-start p-1"
+                        style="top: 420px; left: 50px; width: 400px; height: 60px;">
+                        <span id="dispObsGeneral" class="w-full h-full text-left"></span>
+                    </div>
+
+                </div>
+
+                <!-- TABLA OFICIAL (Restaurada) -->
+                <!-- TABLE REMOVED BY USER REQUEST (Page 1 Summary) -->
+
+            </div>
+        </div>
+
+        <h3 class="no-print text-center text-gray-500 font-bold mb-2 mt-8">Página 2</h3>
+        <!-- PÁGINA 2 -->
+        <div id="page-2" class="a4-page relative shadow-lg border border-gray-400">
+            <!-- Canvas Fondo -->
+            <canvas id="canvas-page-2" class="pdf-canvas absolute inset-0 w-full h-full z-0"></canvas>
+
+            <!-- Contenido Página 2 (Restaurado) -->
+            <div class="content-layer relative z-10 w-full h-full p-8 pt-12">
+                <div id="grades-grid-container" class="w-full"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal de Competencias -->
+    <div id="competencyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl">
+            <h3 id="modalTitle" class="text-lg font-bold mb-4 text-blue-800">Detalles de Competencias
+            </h3>
+            <table class="w-full text-xs mb-4 border-collapse border border-gray-300">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="border p-1">Competencia</th>
+                        <th class="border p-1 w-12">P1</th>
+                        <th class="border p-1 w-12">P2</th>
+                        <th class="border p-1 w-12">P3</th>
+                        <th class="border p-1 w-12">P4</th>
+                        <th class="border p-1 w-12 bg-gray-200">Final</th>
+                        <th class="border p-1 w-16 text-red-600">Recup.</th>
+                    </tr>
+                </thead>
+                <tbody id="competencyTableBody">
+                    <!-- JS generated -->
+                </tbody>
+            </table>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeCompetencyModal()"
+                    class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-sm">Cancelar</button>
+                <button onclick="saveCompetencies()"
+                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación Genérico -->
+    <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-[60]">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm transform transition-all scale-100">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                    <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900" id="confirmModalTitle">Eliminar Estudiante</h3>
+                <div class="mt-2">
+                    <p class="text-sm text-gray-500" id="confirmModalMessage">¿Estás seguro?</p>
+                </div>
+            </div>
+            <div class="mt-5 sm:mt-6 flex gap-3">
+                <button type="button" id="btnConfirmCancel"
+                    class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:text-sm">
+                    Cancelar
+                </button>
+                <button type="button" id="btnConfirmOk"
+                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:text-sm">
+                    Sí, Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Input (Prompt) -->
+    <div id="promptModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-[60]">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm transform transition-all scale-100">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-2" id="promptModalTitle">Título</h3>
+            <p class="text-sm text-gray-500 mb-4" id="promptModalMessage">Mensaje...</p>
+            <input type="text" id="promptInput" class="w-full border p-2 rounded mb-4" placeholder="Escribe aquí...">
+            <div class="flex gap-3 justify-end">
+                <button type="button" id="btnPromptCancel"
+                    class="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:text-sm">
+                    Cancelar
+                </button>
+                <button type="button" id="btnPromptOk"
+                    class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:text-sm">
+                    Aceptar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Importación Excel -->
+    <!-- Modal de Importación Excel (Batch) -->
+    <div id="importModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl h-[90vh] flex flex-col">
+            <h3 class="text-lg font-bold mb-4 text-green-700">Importación Masiva de Calificaciones</h3>
+
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-600 mb-1">1. Seleccione Estudiante
+                    (Maestro):</label>
+                <select id="importStudentSelect"
+                    class="w-full border p-2 rounded text-sm bg-gray-50 focus:border-green-500 outline-none">
+                    <!-- Populated by JS from First File -->
+                </select>
+                <p class="text-[10px] text-gray-500 mt-1">Este estudiante se buscará en todos los archivos subidos.
+                </p>
+            </div>
+
+            <div class="flex-1 overflow-y-auto border border-gray-200 rounded mb-4">
+                <table class="w-full text-xs text-left">
+                    <thead class="bg-gray-100 font-bold text-gray-700 sticky top-0">
+                        <tr>
+                            <th class="p-2 border-b">Archivo</th>
+                            <th class="p-2 border-b">Estado</th>
+                            <th class="p-2 border-b">Asignatura Destino</th>
+                        </tr>
+                    </thead>
+                    <tbody id="importFilesTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end gap-2 border-t pt-4">
+                <button id="btnCancelImport"
+                    class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-sm font-medium">Cancelar</button>
+                <button id="btnConfirmImport"
+                    class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium">Importar
+                    Todo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Main App Logic (Modular) -->
+    <script type="module" src="src/js/app.js?v=51"></script>
+</body>
+
+</html>
