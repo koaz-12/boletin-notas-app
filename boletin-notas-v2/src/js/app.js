@@ -13,6 +13,7 @@ import { PDFManager } from './modules/PDF.js';
 import { AppUtils } from './modules/AppUtils.js';
 import CloudStorage from './modules/CloudStorage.js';
 import { AuthManager } from './modules/AuthManager.js';
+import { ObservationsManager } from './modules/ObservationsManager.js';
 
 // Global Instances (for debugging or legacy access if needed)
 export { store, Toast };
@@ -26,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     store.init();
     AppUI.init(); // Initialize UI bindings (Floating Controls, etc)
     Events.init();
+    ObservationsManager.init();
 
     // 2. Initial UI Config (Settings)
     const state = store.getState();

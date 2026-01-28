@@ -393,7 +393,7 @@ export const ObservationsManager = {
             if (panel && !panel.classList.contains('translate-x-full')) {
                 // Close if clicking outside panel AND not on a trigger button
                 if (!panel.contains(e.target) && !e.target.closest('#btn-open-phrase-bank') && !e.target.closest('.obs-tool-btn')) {
-                    // Logic to stay open? 
+                    this.togglePanel(false);
                 }
             }
         });
