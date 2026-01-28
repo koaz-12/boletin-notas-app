@@ -62,10 +62,15 @@ export const ObservationsManager = {
                 const highIn = document.getElementById('input-range-high');
                 const avgIn = document.getElementById('input-range-avg');
                 const lowIn = document.getElementById('input-range-low');
+                const globalMaxIn = document.getElementById('input-range-global-max');
 
                 if (highIn && settings.high) highIn.value = settings.high;
                 if (avgIn && settings.avg) avgIn.value = settings.avg;
                 if (lowIn && settings.low) lowIn.value = settings.low;
+                if (globalMaxIn && settings.globalMax) globalMaxIn.value = settings.globalMax;
+
+                // Sync dependent Max inputs
+                if (this.updateRangeDisplays) this.updateRangeDisplays();
             }
         } catch (e) { console.error("Error loading obs settings", e); }
     },
@@ -336,17 +341,46 @@ export const ObservationsManager = {
         }
 
         // Save Range Settings on Change
-        ['input-range-high', 'input-range-avg', 'input-range-low'].forEach(id => {
+        const inputIds = [
+            'input-range-high', 'input-range-avg', 'input-range-low',
+            'input-range-global-max', 'input-range-avg-max', 'input-range-low-max', 'input-range-ins-max'
+        ];
+
+        inputIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                // Real-time
-                el.addEventListener('input', () => { if (this.updateRangeDisplays) this.updateRangeDisplays(); });
+                // Real-time Logic (2-way binding)
+                el.addEventListener('input', (e) => {
+                    const val = parseInt(e.target.value);
+                    if (isNaN(val)) return;
+
+                    // If User Edits Max -> Update Min Above
+                    if (id === 'input-range-avg-max') {
+                        const h = document.getElementById('input-range-high');
+                        if (h) h.value = val + 1;
+                    }
+                    if (id === 'input-range-low-max') {
+                        const a = document.getElementById('input-range-avg');
+                        if (a) a.value = val + 1;
+                    }
+                    if (id === 'input-range-ins-max') {
+                        const l = document.getElementById('input-range-low');
+                        if (l) l.value = val + 1;
+                    }
+
+                    // If User Edits Min -> Max Below updates via updateRangeDisplays
+                    if (this.updateRangeDisplays) this.updateRangeDisplays();
+                });
+
                 // Persistence
                 el.addEventListener('change', () => {
                     const h = document.getElementById('input-range-high').value;
                     const a = document.getElementById('input-range-avg').value;
                     const l = document.getElementById('input-range-low').value;
-                    localStorage.setItem('obs_settings', JSON.stringify({ high: h, avg: a, low: l }));
+                    const g = document.getElementById('input-range-global-max').value;
+
+                    localStorage.setItem('obs_settings', JSON.stringify({ high: h, avg: a, low: l, globalMax: g }));
+
                     if (this.updateRangeDisplays) this.updateRangeDisplays();
                     Toast.success('Configuración actualizada');
                 });
@@ -370,17 +404,15 @@ export const ObservationsManager = {
         const aVal = parseInt(document.getElementById('input-range-avg')?.value || 77);
         const lVal = parseInt(document.getElementById('input-range-low')?.value || 65);
 
-        // Logrado Max = Destacado Min - 1
-        const dispAvgMax = document.getElementById('disp-range-avg-max');
-        if (dispAvgMax) dispAvgMax.textContent = (hVal - 1);
+        // Update Max Inputs (Downstream) based on Mins
+        const inAvgMax = document.getElementById('input-range-avg-max');
+        if (inAvgMax && document.activeElement !== inAvgMax) inAvgMax.value = (hVal - 1);
 
-        // Proceso Max = Logrado Min - 1
-        const dispLowMax = document.getElementById('disp-range-low-max');
-        if (dispLowMax) dispLowMax.textContent = (aVal - 1);
+        const inLowMax = document.getElementById('input-range-low-max');
+        if (inLowMax && document.activeElement !== inLowMax) inLowMax.value = (aVal - 1);
 
-        // Insuficiente Max = Proceso Min - 1
-        const dispInsMax = document.getElementById('disp-range-ins-max');
-        if (dispInsMax) dispInsMax.textContent = (lVal - 1);
+        const inInsMax = document.getElementById('input-range-ins-max');
+        if (inInsMax && document.activeElement !== inInsMax) inInsMax.value = (lVal - 1);
     },
 
     handleMagicSuggest: function (input) {
