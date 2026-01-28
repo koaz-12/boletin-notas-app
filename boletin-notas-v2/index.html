@@ -920,9 +920,9 @@
     <div id="settings-modal"
         class="fixed inset-0 bg-gray-900 bg-opacity-75 z-[70] flex items-center justify-center hidden backdrop-blur-sm transition-opacity duration-300">
         <div
-            class="bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 overflow-hidden transform transition-all scale-100">
+            class="bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 overflow-hidden transform transition-all scale-100 flex flex-col max-h-[90vh]">
             <!-- Header -->
-            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 flex-shrink-0">
                 <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
                     <span>⚙️</span> Configuración
                 </h3>
@@ -933,7 +933,7 @@
             </div>
 
             <!-- Body -->
-            <div class="p-6">
+            <div class="p-6 overflow-y-auto">
                 <!-- User Info Section -->
                 <div class="mb-6">
                     <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Cuenta</h4>
