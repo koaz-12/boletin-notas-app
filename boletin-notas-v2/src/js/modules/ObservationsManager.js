@@ -333,17 +333,74 @@ export const ObservationsManager = {
     },
 
     handleMagicSuggest: function (input) {
-        // Logic to calculate average and set 'activeCategory' and open panel
-        // For P1, we need P1 average.
-        // P2...
-        // This requires accessing store to calculate grades.
+        const period = input.dataset.period; // 'p1', 'p2', etc.
+        if (!period) {
+            this.togglePanel(true, input);
+            return;
+        }
 
+        // Calculate Average
+        const subjects = store.getState().subjects || [];
+        let total = 0;
+        let count = 0;
+
+        subjects.forEach(sub => {
+            // Check Final for Period? Or Competencies?
+            // Usually Average is Sum of Grades / Count.
+            // But grades are inside competencies? Or is there a Period Final?
+            // 'p1' exists in competencies: c['p1'].
+            // Let's Average the Competencies first?
+            // Or look for a Subject Average?
+            // The system doesn't seem to store calculated Subject Avg per period explicitly in 'sub', relies on runtime calc?
+            // Wait, GridRenderer calculates rows.
+            // Let's keep it simple: Average of ALL competence values for that period.
+
+            sub.competencies.forEach(comp => {
+                const val = parseFloat(comp[period]);
+                if (!isNaN(val) && val > 0) {
+                    total += val;
+                    count++;
+                }
+            });
+        });
+
+        let average = 0;
+        if (count > 0) average = Math.round(total / count);
+
+        // Map to Category
+        let category = 'average';
+        if (average >= 90) category = 'high';
+        else if (average < 70) category = 'low';
+        else category = 'average';
+
+        // Feedback
+        if (count > 0) {
+            Toast.info(`Promedio calculado: ${average} ➡️ Sugiriendo: ${this.getCategoryLabel(category)}`);
+        } else {
+            Toast.warning("No hay notas suficientes para calcular promedio.");
+        }
+
+        // Action
+        this.switchTab(category);
         this.togglePanel(true, input);
 
-        // Mock Average for now (or implementation later)
-        // Toast.info("Sugerencia basada en promedio... (Lógica en proceso)");
+        // Highlight active tab
+        const panel = document.getElementById('obs-bank-panel');
+        if (panel) {
+            panel.querySelectorAll('.tab-bank').forEach(b => {
+                b.classList.remove('bg-indigo-100', 'text-indigo-700');
+                b.classList.add('bg-gray-200', 'text-gray-600');
+                if (b.dataset.cat === category) {
+                    b.classList.remove('bg-gray-200', 'text-gray-600');
+                    b.classList.add('bg-indigo-100', 'text-indigo-700');
+                }
+            });
+        }
+    },
 
-        // Auto-switch tab logic logic
-        // this.switchTab('high'); 
+    getCategoryLabel: function (cat) {
+        if (cat === 'high') return 'Alto Rendimiento';
+        if (cat === 'low') return 'Refuerzo';
+        return 'Promedio';
     }
 };
