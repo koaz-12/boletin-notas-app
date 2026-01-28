@@ -451,20 +451,22 @@ export const ObservationsManager = {
         if (count > 0) average = Math.round(total / count);
 
         // Get Thresholds (Configurable)
-        const highThresh = parseInt(document.getElementById('input-range-high')?.value || 90);
-        const lowThresh = parseInt(document.getElementById('input-range-low')?.value || 70);
+        const highThresh = parseInt(document.getElementById('input-range-high')?.value || 89);
+        const avgThresh = parseInt(document.getElementById('input-range-avg')?.value || 77);
+        const lowThresh = parseInt(document.getElementById('input-range-low')?.value || 65);
 
         // Map to Category
         let category = 'average';
         if (average >= highThresh) category = 'high';
-        else if (average < lowThresh) category = 'low';
-        else category = 'average';
+        else if (average >= avgThresh) category = 'average';
+        else if (average >= lowThresh) category = 'process';
+        else category = 'insufficient';
 
         // Feedback
         if (count > 0) {
-            Toast.info(`Promedio calculado: ${average} ➡️ Sugiriendo: ${this.getCategoryLabel(category)}`);
+            Toast.info(`Promedio: ${average} ➡️ Fase: ${this.getCategoryLabel(category)}`);
         } else {
-            Toast.warning("No hay notas suficientes para calcular promedio.");
+            Toast.warning("No hay notas suficientes.");
         }
 
         // Action
@@ -486,8 +488,10 @@ export const ObservationsManager = {
     },
 
     getCategoryLabel: function (cat) {
-        if (cat === 'high') return 'Alto Rendimiento';
-        if (cat === 'low') return 'Refuerzo';
-        return 'Promedio';
+        if (cat === 'high') return 'Destacado';
+        if (cat === 'average') return 'Logrado';
+        if (cat === 'process') return 'En Proceso';
+        if (cat === 'insufficient') return 'Insuficiente';
+        return 'Conducta';
     }
 };
