@@ -262,10 +262,36 @@ export const PDFManager = {
                 // Wait for render (DOM update)
                 await new Promise(r => setTimeout(r, 200));
 
+                // Determine Filename based on Settings
+                const currentState = store.getState(); // Refetch to get info
+                const settings = currentState.settings || {};
+                const format = settings.pdfNameFormat || 'default';
+                const info = currentState.studentInfo || {};
+
+                let finalName = studentName; // Default
+
+                if (format === 'lastname') {
+                    // Apellidos, Nombres
+                    if (info.apellidos && info.nombres) {
+                        finalName = `${info.apellidos} ${info.nombres}`;
+                    }
+                } else if (format === 'order') {
+                    // Orden - Nombre
+                    if (info.order) {
+                        const fullName = `${info.nombres || ''} ${info.apellidos || ''}`.trim() || studentName;
+                        finalName = `${info.order} - ${fullName}`;
+                    }
+                }
+
+                // Sanitize
+                finalName = finalName.replace(/[/\\?%*:|"<>]/g, '-').trim();
+                if (!finalName) finalName = "SinNombre";
+                const filename = `${finalName}.pdf`;
+
                 // Config PDF
                 const opts = {
                     margin: 0,
-                    filename: `${studentName}.pdf`,
+                    filename: filename,
                     image: { type: 'jpeg', quality: 0.95 },
                     html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -273,7 +299,7 @@ export const PDFManager = {
                 };
 
                 const blob = await html2pdf().set(opts).from(container).output('blob');
-                zip.file(`${studentName}.pdf`, blob);
+                zip.file(filename, blob);
 
                 // Progress Helper
                 console.log(`PDF Generated: ${studentName}`);

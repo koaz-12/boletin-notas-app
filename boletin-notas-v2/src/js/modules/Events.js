@@ -129,6 +129,10 @@ export const Events = {
                 AppUtils.updateBold('p2_obs', state.settings.boldP2O || false);
                 // Also update global font size if needed
                 if (state.settings.fontSize) AppUtils.updateGlobalFontSize(state.settings.fontSize);
+                if (state.settings.pdfNameFormat) {
+                    const el = document.getElementById('pdfNameFormat');
+                    if (el) el.value = state.settings.pdfNameFormat;
+                }
             }
 
             // Update Student Info Inputs (Profile)
@@ -232,6 +236,9 @@ export const Events = {
             // PDF Background Upload (Redundant ID check?)
             if (target.id === 'pdfUpload') {
                 PDFManager.handleUpload(target);
+            }
+            if (target.id === 'pdfNameFormat') {
+                store.updateSettings({ pdfNameFormat: target.value });
             }
 
             if (target.id === 'viewSelector') {
