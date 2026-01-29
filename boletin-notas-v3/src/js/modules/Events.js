@@ -406,8 +406,7 @@ export const Events = {
             }
 
             // Project & PDF
-            // Project & PDF
-            if (target.closest('#btnExportProject')) Events.exportProject();
+            if (target.id === 'btnExportProject') Events.exportProject();
             if (target.closest('#btnPrintBatch')) PDFManager.generateBatchPDF();
 
             // Export Layout

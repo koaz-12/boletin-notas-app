@@ -202,7 +202,7 @@ export const AppUI = {
     },
 
     initFloatingControls: function () {
-        const list = document.getElementById('floatingControlsList');
+        const list = document.getElementById('floatingControls');
         const btn = document.getElementById('btnToggleControls');
         const icon = document.getElementById('iconToggle');
 

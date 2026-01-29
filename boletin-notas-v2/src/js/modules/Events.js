@@ -413,12 +413,12 @@ export const Events = {
             }
 
             // Project & PDF
-            if (target.id === 'btnExportProject') Events.exportProject();
+            if (target.closest('#btnExportProject')) Events.exportProject();
             if (target.closest('#btnPrintBatch')) PDFManager.generateBatchPDF();
             if (target.closest('#btnZipBatch')) PDFManager.generateBatchZip();
 
             // Export Layout
-            if (target.id === 'btnExportLayout') {
+            if (target.closest('#btnExportLayout')) {
                 interactManager.savePositions(); // Force Save Immediate
                 const grade = store.getState().grade;
                 const layout = localStorage.getItem(`layout_grade_${grade}`);
@@ -446,6 +446,11 @@ export const Events = {
                 document.getElementById('excelFile').value = '';
             }
             if (target.id === 'btnConfirmImport') ImportManager.processBatchImport();
+
+            // Manual Migration (V1)
+            if (target.id === 'btn-migrate-v1') {
+                store.performLegacyMigration(true);
+            }
 
             // Toggle Edit Mode (Float)
             if (target.closest('#btnFloatEdit')) {
@@ -489,8 +494,9 @@ export const Events = {
 
     // Export Project Backup
     exportProject: () => {
-        const state = store.getState();
-        const json = JSON.stringify(state, null, 2);
+        // Use Global Backup (All Sections + Settings) instead of single state
+        const backup = store.exportFullBackup();
+        const json = JSON.stringify(backup, null, 2);
         const blob = new Blob([json], { type: "application/json" });
         const url = URL.createObjectURL(blob);
 
@@ -524,7 +530,13 @@ export const Events = {
                 store.setState(data);
 
                 // Restore UI defaults if needed
-                Toast.success("Proyecto cargado exitosamente.");
+                Toast.success("Proyecto cargado exitosamente.\nReiniciando aplicación...");
+
+                // Force Reload to ensure full sync
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+
             } catch (err) {
                 console.error(err);
                 alert("Error al cargar el proyecto: " + err.message);

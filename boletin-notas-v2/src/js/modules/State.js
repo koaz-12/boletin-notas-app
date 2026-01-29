@@ -74,6 +74,49 @@ export class AppState {
         this.debouncedSave = CoreUtils.debounce(() => this.saveToLocalStorage(), 1000);
     }
 
+    init() {
+        // Bootstrap Migration Check
+        if (sectionManager.sections.length === 0) {
+            this.performLegacyMigration();
+        }
+
+        this.loadFromLocalStorage();
+    }
+
+    performLegacyMigration(force = false) {
+        const legacy = localStorage.getItem('minerd_boletin_data');
+        if (!legacy) {
+            if (force) {
+                alert("No se encontraron datos de la Versión 1 en este navegador.");
+            }
+            return false;
+        }
+
+        if (force && !confirm("Se creará una nueva sección 'Recuperado' con los datos de la v1.\n\n¿Continuar?")) return;
+
+        console.log("🚀 Legacy Migration Started...");
+
+        const newSec = sectionManager.createSection("Recuperado", "1", "Matutina");
+        sectionManager.setCurrent(newSec.id);
+
+        try {
+            const legacyState = JSON.parse(legacy);
+            const v2Data = {
+                version: 2,
+                timestamp: Date.now(),
+                state: legacyState
+            };
+            localStorage.setItem('minerd_data_' + newSec.id, JSON.stringify(v2Data));
+            console.log("✅ Legacy Data Migrated to Section: " + newSec.id);
+            window.location.reload();
+            return true;
+        } catch (e) {
+            console.error("Migration Failed:", e);
+            if (force) alert("Error: Datos V1 corruptos.");
+            return false;
+        }
+    }
+
     resetState() {
         // Try to load school defaults
         let schoolDefaults = {};
@@ -406,13 +449,6 @@ export class AppState {
 
             // Fallback: If no new data, try legacy and migrate
             if (!json) {
-                const legacy = localStorage.getItem('minerd_boletin_data');
-                if (legacy) {
-                    console.log("Migrating Legacy Data to " + key);
-                    localStorage.setItem(key, legacy); // Copy
-                    // localStorage.removeItem('minerd_boletin_data'); // Optional: cleanup later
-                    return this.loadFromLocalStorage(); // Retry
-                }
                 return false;
             }
 
@@ -475,7 +511,32 @@ export class AppState {
     }
 
     importFullBackup(backupObj) {
-        if (!backupObj || !backupObj.sections) return false;
+        if (!backupObj) return false;
+
+        // Legacy Support (Migration V1 -> V2)
+        if (!backupObj.sections && backupObj.studentList) {
+            console.log("⚠️ Old Backup Format Detected. Migrating...");
+
+            // Construct a virtual V2 structure
+            const currentId = sectionManager.currentSectionId || Date.now().toString();
+
+            // Get current section metadata or create default
+            let currentSec = sectionManager.sections.find(s => s.id === currentId);
+            if (!currentSec) {
+                currentSec = { id: currentId, name: "Importado", grade: backupObj.grade || "1" };
+                sectionManager.sections.push(currentSec);
+                localStorage.setItem('minerd_sections_index', JSON.stringify(sectionManager.sections));
+            }
+
+            // Map legacy state to current section data
+            localStorage.setItem('minerd_data_' + currentId, JSON.stringify({ state: backupObj }));
+
+            // Reload
+            window.location.reload();
+            return true;
+        }
+
+        if (!backupObj.sections) return false;
 
         try {
             // 1. Restore Sections Index
