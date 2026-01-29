@@ -240,83 +240,90 @@ export const PDFManager = {
             return;
         }
 
-        const confirmExport = confirm(`Se generarán ${students.length} archivos PDF comprimidos en un ZIP.\n\nEste proceso puede tardar unos minutos.\nPor favor, NO cierres la pestaña.\n\n¿Continuar?`);
-        if (!confirmExport) return;
-
-        Toast.info("Iniciando generación masiva... (Por favor espera)");
-
-        const zip = new JSZip();
-        const initialStudent = state.currentStudent;
-
-        try {
-            const container = document.getElementById('report-container');
-
-            // Ensure visual fidelity
-            // container.style.width = '210mm'; // A4 width forced (Usually controlled by CSS)
-
-            // Loop sequentially
-            for (let i = 0; i < students.length; i++) {
-                const studentName = students[i];
-                store.loadStudent(studentName);
-
-                // Wait for render (DOM update)
-                await new Promise(r => setTimeout(r, 200));
-
-                // Determine Filename based on Settings
-                const currentState = store.getState(); // Refetch to get info
-                const settings = currentState.settings || {};
-                const format = settings.pdfNameFormat || 'default';
-                const info = currentState.studentInfo || {};
-
-                let finalName = studentName; // Default
-
-                if (format === 'lastname') {
-                    // Apellidos, Nombres
-                    if (info.apellidos && info.nombres) {
-                        finalName = `${info.apellidos} ${info.nombres}`;
-                    }
-                } else if (format === 'order') {
-                    // Orden - Nombre
-                    if (info.order) {
-                        const fullName = `${info.nombres || ''} ${info.apellidos || ''}`.trim() || studentName;
-                        finalName = `${info.order} - ${fullName}`;
-                    }
-                }
-
-                // Sanitize
-                finalName = finalName.replace(/[/\\?%*:|"<>]/g, '-').trim();
-                if (!finalName) finalName = "SinNombre";
-                const filename = `${finalName}.pdf`;
-
-                // Config PDF
-                const opts = {
-                    margin: 0,
-                    filename: filename,
-                    image: { type: 'jpeg', quality: 0.95 },
-                    html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: 'css', after: '.a4-page' }
-                };
-
-                const blob = await html2pdf().set(opts).from(container).output('blob');
-                zip.file(filename, blob);
-
-                // Progress Helper
-                console.log(`PDF Generated: ${studentName}`);
-            }
-
-            // Generate ZIP
-            Toast.success("Comprimiendo archivos...");
-            const content = await zip.generateAsync({ type: "blob" });
-            saveAs(content, `Boletines_${state.grade}Grado_${new Date().toISOString().slice(0, 10)}.zip`);
-            Toast.success("¡Exportación completada! Descargando ZIP.");
-
-        } catch (e) {
-            console.error(e);
-            Toast.error("Error en exportación masiva: " + e.message);
-        } finally {
-            // Restore
-            if (initialStudent) store.loadStudent(initialStudent);
+        if (students.length === 0) {
+            Toast.warning("No hay estudiantes para exportar.");
+            return;
         }
+
+        AppUI.confirm(
+            "Exportación Masiva (ZIP)",
+            `Se generarán ${students.length} archivos PDF comprimidos en un ZIP.\n\nEste proceso puede tardar unos minutos.\nPor favor, NO cierres la pestaña.`,
+            async () => {
+                Toast.info("Iniciando generación masiva... (Por favor espera)");
+
+                const zip = new JSZip();
+                const initialStudent = state.currentStudent;
+
+                try {
+                    const container = document.getElementById('report-container');
+
+                    // Ensure visual fidelity
+                    // container.style.width = '210mm'; // A4 width forced (Usually controlled by CSS)
+
+                    // Loop sequentially
+                    for (let i = 0; i < students.length; i++) {
+                        const studentName = students[i];
+                        store.loadStudent(studentName);
+
+                        // Wait for render (DOM update)
+                        await new Promise(r => setTimeout(r, 200));
+
+                        // Determine Filename based on Settings
+                        const currentState = store.getState(); // Refetch to get info
+                        const settings = currentState.settings || {};
+                        const format = settings.pdfNameFormat || 'default';
+                        const info = currentState.studentInfo || {};
+
+                        let finalName = studentName; // Default
+
+                        if (format === 'lastname') {
+                            // Apellidos, Nombres
+                            if (info.apellidos && info.nombres) {
+                                finalName = `${info.apellidos} ${info.nombres}`;
+                            }
+                        } else if (format === 'order') {
+                            // Orden - Nombre
+                            if (info.order) {
+                                const fullName = `${info.nombres || ''} ${info.apellidos || ''}`.trim() || studentName;
+                                finalName = `${info.order} - ${fullName}`;
+                            }
+                        }
+
+                        // Sanitize
+                        finalName = finalName.replace(/[/\\?%*:|"<>]/g, '-').trim();
+                        if (!finalName) finalName = "SinNombre";
+                        const filename = `${finalName}.pdf`;
+
+                        // Config PDF
+                        const opts = {
+                            margin: 0,
+                            filename: filename,
+                            image: { type: 'jpeg', quality: 0.95 },
+                            html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 },
+                            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                            pagebreak: { mode: 'css', after: '.a4-page' }
+                        };
+
+                        const blob = await html2pdf().set(opts).from(container).output('blob');
+                        zip.file(filename, blob);
+
+                        // Progress Helper
+                        console.log(`PDF Generated: ${studentName}`);
+                    }
+
+                    // Generate ZIP
+                    Toast.success("Comprimiendo archivos...");
+                    const content = await zip.generateAsync({ type: "blob" });
+                    saveAs(content, `Boletines_${state.grade}Grado_${new Date().toISOString().slice(0, 10)}.zip`);
+                    Toast.success("¡Exportación completada! Descargando ZIP.");
+
+                } catch (e) {
+                    console.error(e);
+                    Toast.error("Error en exportación masiva: " + e.message);
+                } finally {
+                    // Restore
+                    if (initialStudent) store.loadStudent(initialStudent);
+                }
+            }, false, "Comenzar Exportación");
     }
 };

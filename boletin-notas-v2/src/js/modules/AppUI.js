@@ -390,10 +390,10 @@ export const AppUI = {
         modal.classList.remove('hidden');
     },
 
-    prompt: function (title, message, onOk, placeholder = "") {
+    prompt: function (title, message, onOk, placeholder = "", defaultValue = "") {
         const modal = document.getElementById('promptModal');
         if (!modal) {
-            const val = prompt(message, placeholder);
+            const val = prompt(message, defaultValue || placeholder);
             if (val && onOk) onOk(val);
             return;
         }
@@ -406,7 +406,7 @@ export const AppUI = {
 
         titleEl.innerText = title;
         msgEl.innerText = message;
-        input.value = "";
+        input.value = defaultValue;
         input.placeholder = placeholder;
 
         const submit = () => {

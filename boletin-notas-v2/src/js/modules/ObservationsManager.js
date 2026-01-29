@@ -260,20 +260,36 @@ export const ObservationsManager = {
 
     editPhrase: function (category, index) {
         const oldText = this.userBank[category][index];
-        const newText = prompt("Editar frase:", oldText);
-        if (newText !== null && newText.trim() !== "") {
-            this.userBank[category][index] = newText.trim();
-            this.saveBank();
-            this.switchTab(category);
-            Toast.success("Frase actualizada");
-        }
+
+        AppUI.prompt(
+            "Editar Frase",
+            "Modifica el texto de la frase:",
+            (newText) => {
+                if (newText && newText.trim() !== "") {
+                    this.userBank[category][index] = newText.trim();
+                    this.saveBank();
+                    this.switchTab(category);
+                    Toast.success("Frase actualizada");
+                }
+            },
+            "Escribe la frase...",
+            oldText
+        );
     },
 
     deletePhrase: function (category, index) {
-        if (!confirm("¿Borrar esta frase?")) return;
-        this.userBank[category].splice(index, 1);
-        this.saveBank();
-        this.switchTab(category);
+        AppUI.confirm(
+            "Eliminar Frase",
+            "¿Estás seguro de que deseas borrar esta frase?",
+            () => {
+                this.userBank[category].splice(index, 1);
+                this.saveBank();
+                this.switchTab(category);
+                Toast.info("Frase eliminada");
+            },
+            true,
+            "Borrar"
+        );
     },
 
     insertPhrase: function (phrase) {
